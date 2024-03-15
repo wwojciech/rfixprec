@@ -1,11 +1,11 @@
 library(rAMPL)
 
 path <- file.path("/Volumes/Dane/studia/doktoranckie/alokacja_optymalna/R_code/testy_algorytmow_proby/fixprec/")
-source(file.path(path, "functions/fixprec_WW.R"))
-source(file.path(path, "functions/ampl/ampl_fixprec_fun.R"))
-source(file.path(path, "functions/subsets.R"))
-model <- file.path(path, "functions/ampl/ampl_fixprec.mod")
 setwd(path)
+source(file.path(path, "functions/fixprec.R"))
+source(file.path(path, "functions/subsets.R"))
+source(file.path(path, "ampl/ampl_fixprec.R"))
+model <- file.path(path, "ampl/ampl_fixprec.mod")
 
 # Przyklad 1 (3d, 1>,7>) ----
 
@@ -35,7 +35,7 @@ which(x_17$n_ih == N)
 
 # Inne zbiory active, wiezy spelnione w obu przypadkach ale ampl mniej dokladnie.
 
-data_ampl <- file.path(path, "functions/ampl/ampl_fixprec_9d_2.dat")
+data_ampl <- file.path(path, "ampl/ampl_fixprec_9d_2.dat")
 data <- ampl_readData(data_ampl, model = model)
 J <- data$J
 N <- data$N

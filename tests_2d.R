@@ -1,3 +1,65 @@
+library(rAMPL)
+
+path <- file.path("/Volumes/Dane/studia/doktoranckie/alokacja_optymalna/R_code/testy_algorytmow_proby/fixprec/")
+source(file.path(path, "ampl/ampl_fixprec.R"))
+model <- file.path(path, "ampl/ampl_fixprec.mod")
+
+#' List with all possible subsets (of lengths len) of x.
+#' @param x source subset
+#' @param len vector with sizes of subsets `x`
+subsets <- function(x, len = NULL) {
+  if (is.null(len)) {
+    len <- seq_len(length(x) - 1)
+  }
+  do.call(c, lapply(len, combn, x = x, simplify = FALSE))
+}
+
+#' Subsets of J
+#'
+#' @examples
+#' J <- c(2, 5, 3) # three domains with 2, 5, and 3 strata respectively.
+#' subsets_of_J(J)
+#'
+subsets_of_J <- function(J) {
+  indices_i <- lseq_len(J)
+  subsets_i <- lapply(indices_i, subsets)
+  subsets_i <- subsets_i[lengths(subsets_i) != 0] # remove NULL (occurs if 1s are in J)
+  if (is_empty(subsets_i)) {
+    return(NULL)
+  }
+
+  subsets1 <- do.call(c, subsets_i)
+  J <- J[J != 1] # remove domains with 1 stratum
+  subsets2 <- if (length(J) == 1L) {
+    NULL
+  } else {
+    crossjoin_J <- subsets(seq_along(J), 2:length(J)) # combination of elements of J.
+    subsets2 <- lapply(crossjoin_J, function(x) {
+      cj <- do.call(expand.grid, subsets_i[x])
+      colnames(cj) <- NULL
+      split(cj, seq(nrow(cj)))
+    })
+    subsets2 <- do.call(c, subsets2)
+    setNames(lapply(subsets2, unlist), NULL)
+  }
+
+  all_subsets <- c(list(NULL), subsets1, subsets2)
+
+  # verification
+  combn_in_i <- 2^J - 2
+  if (length(combn_in_i) == 1L) {
+    combn_in_i <- c(0, combn_in_i) # since combn() works differently for scalar x.
+  }
+  no_all_subsets <- sum(
+    1,
+    sapply(seq_along(J), function(i) sum(combn(combn_in_i, i, prod)))
+  )
+  if (length(all_subsets) != no_all_subsets) {
+    stop("Zle obliczone podzbiory")
+  }
+  all_subsets
+}
+
 #' Function for equal-precision optimal allocation in single-stage sampling
 #' with domains and strata in domains.
 #'
@@ -162,10 +224,10 @@ rfixprec_2d <- function(n, J, N, S, total, kappa = NULL, domain = 1L) {
 #' (n <- nmax(J, N, S) - 1)
 #'
 #' (x <- fixprec(n, J, N, S, total, kappa))
-#' check_kkt(x$n_ih, J, N, S, total, kappa, n)
-#' check_kkt(x$n_ih, J, N, S, total, kappa, n, details = TRUE)
+#' check_kkt(x$n_ih, J, N, S, total, kappa, n, active = NULL, s = x$s_i, details = FALSE)
+#' check_kkt(x$n_ih, J, N, S, total, kappa, n, active = NULL, s = x$s_i, details = TRUE)
 #'
-check_kkt <- function(n_opt, J, N, S, total, kappa, n, active = NULL, s, tol = 10^-9, details = FALSE) {
+check_kkt <- function(n_opt, J, N, S, total, kappa, n, active, s, tol = 10^-9, details = FALSE) {
   Ti_notscaled <- tapply(N^2 / n_opt * S^2 - N * S^2, domain_indicators(J), sum)
   Ti <- Ti_notscaled / total^2
   T_opt <- sum(Ti_notscaled) / sum(total^2 * kappa)
@@ -242,70 +304,198 @@ lseq_len <- function(J) {
   )
 }
 
-empty <- function(x) {
-  length(x) == 0L
-}
-
-non_empty <- function(x) {
+is_non_empty <- function(x) {
   length(x) > 0L
 }
 
-#' Recursive FIXPREC algorithm
-#'
-#' @examples
-#' J <- c(2, 2, 3) # three domains with 2, 2, and 3 strata respectively
-#' N <- c(140, 110, 135, 190, 200, 40, 70)
-#' S <- sqrt(c(180, 20, 5, 4, 35, 9, 40))
-#' total <- c(2, 3, 5)
-#' kappa <- c(0.5, 0.2, 0.3)
-#' (n <- nmax(J, N, S) - 1)
-#'
-#' x <- rfixprec(n, J, N, S, total, kappa)
-#' x # 140 103.60438 132.18060 166.39204 195.95002  19.87296  70
-#' x$T_eigenval # 67.90425
-#'
-rfixprec <- function(n, J, N, S, total, kappa = NULL, recursive_domain = 1L) {
-  stopifnot(length(recursive_domain) == 1L)
-  stopifnot(recursive_domain <= length(J))
-
-  W <- lseq_len(J) # list with strata global indices in all domains
-  W_rec <- W[[recursive_domain]] # recursive domain
-  W_nrec <- W[-recursive_domain] # non recursive domain
-  W_nrec_active <- vector("list", length(W_nrec))
-  I_nrec <- seq_along(W_nrec) # indices of non recursive domains
-
-  repeat {
-    # 1. Allocate in recursive_domain.
-    W_active <- unlist(W_nrec_active)
-    repeat {
-      x <- fixprec(n, J, N, S, total, kappa, W_active)$n_ih
-      violated <- which(x[W_rec] > N[W_rec])
-      if (empty(violated)) {
-        break
-      } else {
-        W_active <- c(W_active, W_rec[violated])
-        # if (all(W_rec %in% W_active)) {
-        #   stop("Wszystkie wiezy aktywne w wyroznionej domenie") # wstepne symulacje pokazuje, ze niemozliwe
-        # }
-      }
-    }
-
-    # 2. Check for violations in remaining (non recursive) domains.
-    for (i in I_nrec) {
-      W_i <- W_nrec[[i]]
-      violated <- which(x[W_i] > N[W_i]) # W_i powinno zostac zmniejszone o active temp
-      if (non_empty(violated)) {
-        if (i >= 2 && empty(W_nrec_active[[i]])) { # wyczysc poprzednie active
-          W_nrec_active[1:(i - 1)] <- list(NULL)
-        }
-        W_nrec_active[[i]] <- c(W_nrec_active[[i]], W_i[violated])
-        break
-      }
-    }
-
-    if (empty(violated)) {
-      break
-    }
-  }
-  x
+is_empty <- function(x) {
+  length(x) == 0L
 }
+
+# Przyklad 0 ----
+
+J <- c(1, 2)
+N <- c(14, 11, 90)
+S <- sqrt(c(4950, 50, 2))
+total <- c(2, 3)
+kappa <- c(0.4, 0.6)
+(n <- nmax(J, N, S) - 1)
+
+(x <- fixprec(n, J, N, S, total, kappa, active = 2))
+
+# Przyklad 1 (1>,3>) ----
+
+# J = 2 2
+# Przekroczone 1,3,
+# -1 => alokacja optymalna
+# -3 => alokacja not feasible
+# -1, -3 => alokacja feasible, nie optymalna
+
+J <- c(2, 2) # two domains with 2 strata each.
+N <- c(140, 110, 135, 190)
+S <- sqrt(c(180, 20, 5, 4))
+total <- c(2, 3)
+kappa <- c(0.4, 0.6)
+(n <- nmax(J, N, S) - 1)
+
+ampl_alloc <- ampl_fixprec(n, J = c(2, 2), N, S, total, kappa, model = model)
+ampl_alloc$Topt
+ampl_alloc$n_ih
+
+(x <- fixprec(n, J, N, S, total, kappa))
+# 162.47371  42.55264 142.98313 179.99052 (1>, 3>)
+# T = 0.8476689
+
+# Usuniecie 1, naprawia 3.
+(x_1 <- fixprec(n, J, N, S, total, kappa, active = 1, details = TRUE))
+x_1$T_eigenval
+ampl_alloc$Topt
+ampl_alloc$n_ih
+x_1$n_ih
+# 140.0000 106.8521 124.4665 156.6814 (OK)
+# T = 40.50748 (optimal)
+
+(x_2 <- fixprec(n, J, N, S, total, kappa, active = 2, details = TRUE))
+# T = 43.54576 (negative mu)
+
+(x_3 <- fixprec(n, J, N, S, total, kappa, active = 3, details = TRUE))
+# T = 1.511168 (1>)
+
+(x_4 <- fixprec(n, J, N, S, total, kappa, active = 4, details = TRUE))
+# T = 1.892899 (1>)
+
+(x_13 <- fixprec(n, J, N, S, total, kappa, active = c(1, 3), details = TRUE))
+# T = 42.08127 (negative mu)
+
+(x_14 <- fixprec(n, J, N, S, total, kappa, active = c(1, 4), details = TRUE))
+# T = 57.58687 (negative mu)
+
+(x_23 <- fixprec(n, J, N, S, total, kappa, active = c(2, 3), details = TRUE))
+# T = 45.72894 (negative mu)
+
+(x_24 <- fixprec(n, J, N, S, total, kappa, active = c(2, 4), details = TRUE))
+# T = 65.50605 (negative mu)
+
+# Przyklad 2 ----
+# Przekroczone 1,4,
+# -1 => alokacja feasible
+# -3 => alokacja feasible (optymalna)
+
+# Przyklad 3 ----
+# Przekroczone 1, 2
+# -1 => alokacja optymalna
+# -3 => alokacja feasible
+
+# Przyklad 4 ----
+
+H1 <- 3
+H2 <- 4
+J <- c(H1, H2)
+ind1 <- sample(nrow(stratallo::pop507), H1)
+ind2 <- sample(nrow(stratallo::pop507), H2)
+N <- c(stratallo::pop507[ind1, "N"], stratallo::pop507[ind2, "N"])
+S <- c(stratallo::pop507[ind1, "S"], stratallo::pop507[ind2, "S"])
+total <- c(2, 2)
+kappa <- c(0.3, 0.3)
+(nm <- nmax(J, N, S) - 1)
+all_subsets <- subsets_of_J(J)
+
+delt <- logical(nm)
+for (n in 1:nm) {
+  print(n)
+  # recursive FIXPREC
+  x_rec <- rfixprec_2d(n, J, N, S, total, kappa, domain = 1L)
+  s <- as.vector(tail(x_rec$s_i[, -(1:2), drop = FALSE], 1))
+  Topt <- check_kkt(x_rec$n_ih, J, N, S, total, kappa, n, active = x_rec$active, s = s, tol = 0.9)
+
+  # all subsets
+  Topt_as <- sapply(all_subsets, function(i) {
+    if (n > sum(N[i])) {
+      x <- fixprec(n, J, N, S, total, kappa, active = i)
+      check_kkt(x$n_ih, J, N, S, total, kappa, n, active = i, s = x$s_i, tol = 0.9)
+    } else {
+      NA_real_
+    }
+  })
+  Topt_as <- Topt_as[!is.na(Topt_as)]
+  if (length(Topt_as) == 0 || length(Topt_as) >= 2) {
+    print(n)
+  }
+  delt[n] <- min(Topt_as) == Topt
+}
+table(delt, useNA = "ifany")
+
+# 2 duze domeny (monotonicznosc s) ----
+
+H1 <- 10
+H2 <- 10
+
+J <- c(H1, H2) # two domains with 2 strata each.
+N <- c(sample(1000, H1), sample(500, H2))
+S <- sqrt(c(sample(3000, H1), sample(1000, H2)))
+total <- c(20, 500)
+kappa <- c(0.3, 0.7)
+(nm <- nmax(J, N, S) - 1)
+
+al <- rfixprec_2d(nm, J, N, S, total, kappa)
+
+# monotonicznosc s_i
+result <- sapply(1:nm, function(n) {
+  x <- rfixprec_2d(n, J, N, S, total, kappa)
+  if (nrow(x$s_i) >= 2) {
+    tapply(1:nrow(x$s_i), x$s_i[, "iter"], function(i) {
+      all(diff(x$s_i[i, "s_1", drop = TRUE]) > 0) &&
+        all(diff(x$s_i[i, "s_2", drop = TRUE]) < 0)
+    })
+  } else {
+    NA
+  }
+})
+table(unlist(result), useNA = "ifany")
+
+# testy grid (parallel) ----
+
+x <- 2
+pop <- expand.grid(20:(20 + x), 30:(30 + x), 20:(20 + x), 40:(40 + x), 2:(2 + x), 12:(12 + x), 21:(21 + x), 30:(30 + x))
+J <- c(2, 2)
+total <- c(10, 10)
+kappa <- c(0.5, 0.5)
+
+library(parallel)
+result <- mclapply(
+  1:100, #  1:nrow(pop),
+  function(i) {
+    # print(i / nrow(pop))
+    N <- unlist(pop[i, 1:4])
+    S <- unlist(pop[i, 5:8])
+    nm <- nmax(J, N, S) - 1
+    all_subsets <- subsets_of_J(J)
+
+    delt <- logical(nm)
+    for (n in 1:nm) {
+      # print(n)
+      # recursive FIXPREC
+      x_rec <- rfixprec_2d(n, J, N, S, total, kappa, domain = 1L)
+      s <- as.vector(x_rec$s_i[nrow(x_rec$s_i), -(1:2), drop = FALSE])
+      Topt <- check_kkt(x_rec$n_ih, J, N, S, total, kappa, n, active = x_rec$active, s = s, tol = 0.9)
+
+      # all subsets
+      Topt_as <- sapply(all_subsets, function(i) {
+        if (n > sum(N[i])) {
+          x <- fixprec(n, J, N, S, total, kappa, active = i)
+          check_kkt(x$n_ih, J, N, S, total, kappa, n, active = i, s = x$s_i, tol = 0.9)
+        } else {
+          NA_real_
+        }
+      })
+      Topt_as <- Topt_as[!is.na(Topt_as)]
+      if (length(Topt_as) == 0 || length(Topt_as) >= 2) {
+        stop("Topt not uniqe or missing")
+      }
+      delt[n] <- min(Topt_as) == Topt
+    }
+    all(delt)
+  },
+  mc.cores = 10
+)
+table(unlist(result), useNA = "ifany")

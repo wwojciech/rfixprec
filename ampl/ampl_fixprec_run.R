@@ -5,8 +5,8 @@ env <- new(Environment, "/Applications/AMPL")
 ampl <- new(AMPL, env)
 
 # Read model and the data.
-ampl$read(file.path(path, "functions/ampl/ampl_fixprec.mod"))
-ampl$readData(file.path(path, "functions/ampl/ampl_fixprec_3d.dat"))
+ampl$read(file.path(path, "ampl/ampl_fixprec.mod"))
+ampl$readData(file.path(path, "ampl/ampl_fixprec_3d.dat"))
 
 # Solve it.
 ampl$setOption("solver", "ipopt")
