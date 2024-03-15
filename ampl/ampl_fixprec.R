@@ -20,7 +20,7 @@ ampl_fixprec <- function(n, J, N, S, total, kappa,
                          output_handler = ampl_output_handler_ipopt,
                          solver = "ipopt",
                          solver_options = "max_iter=500 print_level=0") {
-  # Setup ampl env and read model file.
+  # Setup the AMPL env. and read model file.
   env <- new(Environment, "/Applications/AMPL")
   ampl <- new(AMPL, env)
   ampl$read(model)
@@ -93,6 +93,7 @@ ampl_fixprec <- function(n, J, N, S, total, kappa,
 }
 
 ampl_readData <- function(data = "ampl_fixprec_9d_2.dat", model = "ampl_fixprec.mod") {
+  # Setup the AMPL env. and read model and data files.
   env <- new(Environment, "/Applications/AMPL")
   ampl <- new(AMPL, env)
   ampl$read(model)
