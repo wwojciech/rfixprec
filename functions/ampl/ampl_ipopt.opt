@@ -1,0 +1,9 @@
+# Turn off the NLP scaling.
+nlp_scaling_method none
+
+# Set the max number of iterations.
+max_iter 500
+
+# Output verbosity level. Valid range: 0 ≤ print_level ≤ 12, default value is 5.
+print_level 0
+
