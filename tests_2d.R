@@ -24,7 +24,7 @@ subsets_of_J <- function(J) {
   indices_i <- lseq_len(J)
   subsets_i <- lapply(indices_i, subsets)
   subsets_i <- subsets_i[lengths(subsets_i) != 0] # remove NULL (occurs if 1s are in J)
-  if (is_empty(subsets_i)) {
+  if (empty(subsets_i)) {
     return(NULL)
   }
 
@@ -304,11 +304,7 @@ lseq_len <- function(J) {
   )
 }
 
-is_non_empty <- function(x) {
-  length(x) > 0L
-}
-
-is_empty <- function(x) {
+empty <- function(x) {
   length(x) == 0L
 }
 

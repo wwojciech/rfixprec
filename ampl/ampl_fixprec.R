@@ -1,10 +1,25 @@
 # library(rAMPL)
 
+ampl_output_handler_ipopt <- function(x) {
+  pattern_ipopt <- "^ \\nIpopt ([[:digit:]])+\\.([[:digit:]])+\\.([[:digit:]])+: "
+  pattern_solfound <- paste0(pattern_ipopt, "Optimal Solution Found")
+  if (any(grepl(pattern_ipopt, x)) && !any(grepl(pattern_solfound, x))) {
+    cat(gsub(pattern_ipopt, "", x))
+  }
+  pattern_check <- "^.*check:"
+  check <- grepl(pattern_check, x)
+  if (any(check)) {
+    cat(gsub(pattern_check, "check failed:", x[check]))
+  }
+}
+
 ampl_fixprec <- function(n, J, N, S, total, kappa,
                          data = NULL,
                          model = "ampl_fixprec.mod",
-                         print_values = FALSE, short_ampl_output = TRUE,
-                         ipopt_options = "max_iter=500 print_level=0") {
+                         print_values = FALSE,
+                         output_handler = ampl_output_handler_ipopt,
+                         solver = "ipopt",
+                         solver_options = "max_iter=500 print_level=0") {
   # Setup ampl env and read model file.
   env <- new(Environment, "/Applications/AMPL")
   ampl <- new(AMPL, env)
@@ -51,22 +66,11 @@ ampl_fixprec <- function(n, J, N, S, total, kappa,
   # Set options and solve the problem.
   # ampl$setOption("show_stats", 0)
   # ampl$setOption("solver_msg", 1)
-  ampl$setOption("solver", "ipopt")
-  ampl$setOption("ipopt_options", ipopt_options)
-
-  if (short_ampl_output) {
-    output_handler <- function(x) {
-      pattern_ipopt <- "^ \\nIpopt ([[:digit:]])+\\.([[:digit:]])+\\.([[:digit:]])+: "
-      pattern_solfound <- paste0(pattern_ipopt, "Optimal Solution Found")
-      if (any(grepl(pattern_ipopt, x)) && !any(grepl(pattern_solfound, x))) {
-        cat(gsub(pattern_ipopt, "", x))
-      }
-      pattern_check <- "^.*check:"
-      check <- grepl(pattern_check, x)
-      if (any(check)) {
-        cat(gsub(pattern_check, "check failed:", x[check]))
-      }
-    }
+  ampl$setOption("solver", solver)
+  if (is.character(solver_options)) {
+    ampl$setOption(paste0(solver, "_options"), solver_options)
+  }
+  if (is.function(output_handler)) {
     ampl$setOutputHandler(output_handler)
   }
 
