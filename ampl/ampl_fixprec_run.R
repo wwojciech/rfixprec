@@ -22,5 +22,5 @@ cat(sprintf("Objective is: %g\n", Topt$value()))
 nopt <- ampl$getVariable("x")
 (nopt <- nopt$getValues()[, "x.val"])
 
-# Stop the AMPl engine.
+# Stop the AMPL engine.
 ampl$close()

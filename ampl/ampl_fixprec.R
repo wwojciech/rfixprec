@@ -86,7 +86,7 @@ ampl_fixprec <- function(n, J, N, S, total, kappa,
   Topt <- var_base_variance$value()
   nopt <- var_x$getValues()[, "x.val"]
 
-  # Stop the AMPl engine.
+  # Stop the AMPL engine.
   ampl$close()
 
   list(Topt = Topt, n_ih = nopt, ampl_out = ampl_out)
@@ -115,7 +115,7 @@ ampl_readData <- function(data = "ampl_fixprec_9d_2.dat", model = "ampl_fixprec.
   kappa <- param_kappa$getValues()[, "kappa"]
   n <- param_n$getValues()[, "n"]
 
-  # Stop the AMPl engine.
+  # Stop the AMPL engine.
   ampl$close()
 
   list(J = J, n = n, N = N, S = S, total = total, kappa = kappa)
