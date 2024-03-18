@@ -61,7 +61,7 @@ ampl_fixprec <- function(n, J, N, S, total, kappa,
     print(cbind(param_total$getValues(), kappa = param_kappa$getValues()[, "kappa"]))
     cat(sprintf("Total sample size n: %g\n", param_n$getValues()))
   }
-  # ampl$exportData("ampl_fixprec_9d_2.dat")
+  # ampl$exportData("ampl_fixprec_4d.dat")
 
   # Set options and solve the problem.
   # ampl$setOption("show_stats", 0)

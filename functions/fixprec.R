@@ -43,7 +43,7 @@ fixprec <- function(n, J, N, S, total, kappa = NULL, active = NULL, details = TR
   n0 <- n
 
   J <- domain_indicators(J)
-  if (!is.null(active)) {
+  if (non_empty(active)) {
     n <- n - sum(N[active])
     J <- J[-active]
     N <- N[-active]
@@ -67,7 +67,7 @@ fixprec <- function(n, J, N, S, total, kappa = NULL, active = NULL, details = TR
   s_i <- n * v / as.numeric(t(a) %*% v)
   A <- (N * S) / rep(rho, times = table(J)) # brakets due to finite-prec arithmetic!
   x <- rep(s_i, table(J)) * A
-  if (!is.null(active)) {
+  if (non_empty(active)) {
     N <- N0
     N[-active] <- x
     x <- N
@@ -165,24 +165,32 @@ rfixprec_2d <- function(n, J, N, S, total, kappa = NULL, domain = 1L) {
 #' check_kkt(x$n_ih, J, N, S, total, kappa, n)
 #' check_kkt(x$n_ih, J, N, S, total, kappa, n, details = TRUE)
 #'
-check_kkt <- function(n_opt, J, N, S, total, kappa, n, active = NULL, s, tol = 10^-9, details = FALSE) {
+check_kkt <- function(n_opt, J, N, S, total, kappa, n, active = NULL, s = NULL, tol = 10^-9, details = FALSE) {
+  strata_ind <- seq_along(n_opt)
+
   Ti_notscaled <- tapply(N^2 / n_opt * S^2 - N * S^2, domain_indicators(J), sum)
   Ti <- Ti_notscaled / total^2
   T_opt <- sum(Ti_notscaled) / sum(total^2 * kappa)
-
   is_Ti_eq_kappa_T <- Ti - kappa * T_opt < tol
   is_sum_nopt_eq_n <- sum(n_opt) - n < tol
   n_ih_leq_N <- n_opt <= N
+  names(n_ih_leq_N) <- strata_ind
 
   # check if mu_ih is non-negative for active constraints
-  is_mu_ih_nonneg <- if (is.null(active)) {
-    TRUE
+  if (empty(active)) {
+    active <- which(n_opt == N)
   } else {
-    rho <- total * sqrt(kappa)
-    A <- (N * S) / rep(rho, times = J)
-    s <- rep(s, times = J)
-    all((s >= N / A)[active])
+    stopifnot(setequal(active, which(n_opt == N))) # might be time consuming
   }
+
+  is_mu_ih_nonneg <- if (empty(s)) {
+    n_opt[active] >= N[active]
+  } else {
+    rho <- rep(total * sqrt(kappa), times = J)
+    s <- rep(s, times = J)
+    s[active] >= rho[active] / S[active]
+  }
+  names(is_mu_ih_nonneg) <- active
 
   if (details) {
     list(
@@ -191,7 +199,9 @@ check_kkt <- function(n_opt, J, N, S, total, kappa, n, active = NULL, s, tol = 1
       is_Ti_eq_kappa_T = is_Ti_eq_kappa_T,
       is_sum_nopt_eq_n = is_sum_nopt_eq_n,
       n_ih_leq_N = n_ih_leq_N,
-      is_mu_ih_nonneg = is_mu_ih_nonneg
+      is_mu_ih_nonneg = is_mu_ih_nonneg,
+      active = active,
+      active_len = length(active)
     )
   } else {
     if (all(is_Ti_eq_kappa_T, is_sum_nopt_eq_n, n_ih_leq_N, is_mu_ih_nonneg)) {
@@ -264,7 +274,7 @@ non_empty <- function(x) {
 #' x # 140 103.60438 132.18060 166.39204 195.95002  19.87296  70
 #' x$T_eigenval # 67.90425
 #'
-rfixprec <- function(n, J, N, S, total, kappa = NULL, recursive_domain = 1L) {
+rfixprec <- function(n, J, N, S, total, kappa = NULL, recursive_domain = 1L, tol = -0.001) {
   stopifnot(length(recursive_domain) == 1L)
   stopifnot(recursive_domain <= length(J))
 

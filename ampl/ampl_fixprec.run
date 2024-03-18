@@ -1,6 +1,6 @@
-option ampl_include '/Volumes/Dane/studia/doktoranckie/alokacja_optymalna/R_code/testy_algorytmow_proby/fixprec/ampl/';
+option ampl_include '/Volumes/Dane/studia/doktoranckie/alokacja_optymalna/R_code/testy_algorytmow/fixprec/ampl/';
 model ampl_fixprec.mod;
-data ampl_fixprec_9d_2.dat;
+data data/ampl_fixprec_9d_2.dat;
 option solver ipopt;
 option ipopt_options 'nlp_scaling_method=none max_iter=500 print_level=3';
 # or

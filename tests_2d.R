@@ -1,6 +1,6 @@
 library(rAMPL)
 
-path <- file.path("/Volumes/Dane/studia/doktoranckie/alokacja_optymalna/R_code/testy_algorytmow_proby/fixprec/")
+path <- file.path("/Volumes/Dane/studia/doktoranckie/alokacja_optymalna/R_code/testy_algorytmow/fixprec/")
 source(file.path(path, "ampl/ampl_fixprec.R"))
 model <- file.path(path, "ampl/ampl_fixprec.mod")
 
@@ -105,7 +105,7 @@ fixprec <- function(n, J, N, S, total, kappa = NULL, active = NULL, details = TR
   n0 <- n
 
   J <- domain_indicators(J)
-  if (!is.null(active)) {
+  if (!empty(active)) {
     n <- n - sum(N[active])
     J <- J[-active]
     N <- N[-active]
@@ -129,7 +129,7 @@ fixprec <- function(n, J, N, S, total, kappa = NULL, active = NULL, details = TR
   s_i <- n * v / as.numeric(t(a) %*% v)
   A <- (N * S) / rep(rho, times = table(J)) # brakets due to finite-prec arithmetic!
   x <- rep(s_i, table(J)) * A
-  if (!is.null(active)) {
+  if (!empty(active)) {
     N <- N0
     N[-active] <- x
     x <- N

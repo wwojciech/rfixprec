@@ -1,13 +1,13 @@
 library(rAMPL)
-path <- file.path("/Volumes/Dane/studia/doktoranckie/alokacja_optymalna/R_code/testy_algorytmow_proby/fixprec/")
+path <- file.path("/Volumes/Dane/studia/doktoranckie/alokacja_optymalna/R_code/testy_algorytmow/fixprec/ampl/")
 
 # Setup the AMPL env.
 env <- new(Environment, "/Applications/AMPL")
 ampl <- new(AMPL, env)
 
 # Read model and the data.
-ampl$read(file.path(path, "ampl/ampl_fixprec.mod"))
-ampl$readData(file.path(path, "ampl/ampl_fixprec_3d.dat"))
+ampl$read(file.path(path, "ampl_fixprec.mod"))
+ampl$readData(file.path(path, "data/ampl_fixprec_3d.dat"))
 
 # Solve it.
 ampl$setOption("solver", "ipopt")

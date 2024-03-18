@@ -1,0 +1,5 @@
+options knitro_options "feastol_abs=0.000000001";
+solve;
+display T;
+display x;
+
