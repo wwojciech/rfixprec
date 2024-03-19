@@ -1,4 +1,4 @@
-# P-F theorem, wiecej niz jedna dodatnia wartosc wlasna. ----
+# P-F theorem, more than one strictly positive eigenvalue.
 D <- structure(
   c(
     22L, 2L, 13L, 11L, 3L,

@@ -8,13 +8,13 @@ subsets <- function(x, len = NULL) {
   do.call(c, lapply(len, combn, x = x, simplify = FALSE))
 }
 
-#' Subsets of J
+#' Cross-domain subsets with strata
 #'
 #' @examples
 #' J <- c(2, 5, 3) # three domains with 2, 5, and 3 strata respectively.
-#' subsets_of_J(J)
+#' subsets_domains(J)
 #'
-subsets_of_J <- function(J) {
+subsets_domains <- function(J) {
   indices_i <- lseq_len(J)
   subsets_i <- lapply(indices_i, subsets)
   subsets_i <- subsets_i[lengths(subsets_i) != 0] # remove NULL (occurs if 1s are in J)

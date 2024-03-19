@@ -18,17 +18,15 @@
 #' kappa <- c(0.4, 0.6)
 #' (n <- nmax(J, N, S) - 1)
 #'
-#' (x <- fixprec(n, J, N, S, total, kappa))
+#' (x <- fixprec(n, J, N, S, total, kappa, details = TRUE))
 #' x$n_ih # 162.47371 42.55264 142.98313 179.99052
-#' x$check_cnstr
 #' x$T_eigenval # 0.8476689
 #'
-#' (x_opt <- fixprec(n, J, N, S, total, kappa, active = 1))
+#' (x_opt <- fixprec(n, J, N, S, total, kappa, active = 1, details = TRUE))
 #' x_opt$n_ih # 140 106.8521 124.4665 156.6814
-#' x_opt$check_cnstr
 #' x_opt$T_eigenval # 40.50748
 #'
-fixprec <- function(n, J, N, S, total, kappa = NULL, active = NULL, details = TRUE) {
+fixprec <- function(n, J, N, S, total, kappa = NULL, active = NULL, details = FALSE) {
   if (n >= nmax(J, N, S)) {
     stop("Total sample size n is too large")
   }
@@ -65,7 +63,7 @@ fixprec <- function(n, J, N, S, total, kappa = NULL, active = NULL, details = TR
   }
 
   s_i <- n * v / as.numeric(t(a) %*% v)
-  A <- (N * S) / rep(rho, times = table(J)) # brakets due to finite-prec arithmetic!
+  A <- (N * S) / rep(rho, table(J)) # brakets due to finite-prec arithmetic!
   x <- rep(s_i, table(J)) * A
   if (non_empty(active)) {
     N <- N0
@@ -74,14 +72,14 @@ fixprec <- function(n, J, N, S, total, kappa = NULL, active = NULL, details = TR
   }
 
   if (details) {
-    check_cnstr <- check_kkt(x, J0, N0, S0, total, kappa, n0, active, s_i, details = TRUE)
+    kkt <- check_kkt(x, J0, N0, S0, total, kappa, n0, active, s_i, details = TRUE)
     A <- (N0 * S0) / rep(rho, times = J0)
     list(
-      T_eigenval = T_eigenval, Ti = kappa * T_eigenval, check_cnstr = check_cnstr,
-      D.matrix = D.matrix, eigen = eigenout, N_over_A = N0 / A, s_i = s_i, n_ih = x
+      D.matrix = D.matrix, eigen = eigenout, T_eigenval = T_eigenval,
+      N_over_A = N0 / A, s_i = s_i, kkt = kkt, n_ih = x
     )
   } else {
-    list(T_eigenval = T_eigenval, n_ih = x)
+    x
   }
 }
 
@@ -115,8 +113,8 @@ rfixprec_2d <- function(n, J, N, S, total, kappa = NULL, domain = 1L) {
     check_for_active <- W # potentially active strata in a given domain
     active_temp <- active
     repeat {
-      x <- fixprec(n, J, N, S, total, kappa, active_temp)
-      s_i <- rbind(s_i, c(iter, x$check_cnstr$T_opt, x$s_i)) # for debug only
+      x <- fixprec(n, J, N, S, total, kappa, active_temp, details = TRUE)
+      s_i <- rbind(s_i, c(iter, x$kkt$T_opt, x$s_i)) # for debug only
       x <- x$n_ih
       active1 <- which(x[check_for_active] >= N[check_for_active])
       if (length(active1) == 0L) {
@@ -270,11 +268,10 @@ non_empty <- function(x) {
 #' kappa <- c(0.5, 0.2, 0.3)
 #' (n <- nmax(J, N, S) - 1)
 #'
-#' x <- rfixprec(n, J, N, S, total, kappa)
-#' x # 140 103.60438 132.18060 166.39204 195.95002  19.87296  70
-#' x$T_eigenval # 67.90425
+#' (x <- rfixprec(n, J, N, S, total, kappa))
+#' x$n_ih # 140 103.60438 132.18060 166.39204 195.95002  19.87296  70
 #'
-rfixprec <- function(n, J, N, S, total, kappa = NULL, recursive_domain = 1L, tol = -0.001) {
+rfixprec <- function(n, J, N, S, total, kappa = NULL, recursive_domain = 1L) {
   stopifnot(length(recursive_domain) == 1L)
   stopifnot(recursive_domain <= length(J))
 
@@ -288,7 +285,7 @@ rfixprec <- function(n, J, N, S, total, kappa = NULL, recursive_domain = 1L, tol
     # 1. Allocate in recursive_domain.
     W_active <- unlist(W_nrec_active)
     repeat {
-      x <- fixprec(n, J, N, S, total, kappa, W_active)$n_ih
+      x <- fixprec(n, J, N, S, total, kappa, W_active)
       violated <- which(x[W_rec] > N[W_rec])
       if (empty(violated)) {
         break
@@ -305,7 +302,7 @@ rfixprec <- function(n, J, N, S, total, kappa = NULL, recursive_domain = 1L, tol
       W_i <- W_nrec[[i]]
       violated <- which(x[W_i] > N[W_i]) # W_i powinno zostac zmniejszone o active temp
       if (non_empty(violated)) {
-        if (i >= 2 && empty(W_nrec_active[[i]])) { # wyczysc poprzednie active
+        if (i >= 2 && non_empty(W_nrec_active[1:(i - 1)])) { # wyczysc temp active z poprzednich domen
           W_nrec_active[1:(i - 1)] <- list(NULL)
         }
         W_nrec_active[[i]] <- c(W_nrec_active[[i]], W_i[violated])

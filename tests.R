@@ -4,7 +4,6 @@ library(rAMPL)
 path <- file.path("/Volumes/Dane/studia/doktoranckie/alokacja_optymalna/R_code/testy_algorytmow/fixprec/")
 setwd(path)
 source(file.path(path, "functions/fixprec.R"))
-source(file.path(path, "functions/subsets.R"))
 source(file.path(path, "ampl/ampl_fixprec.R"))
 model <- file.path(path, "ampl/ampl_fixprec.mod")
 
@@ -24,13 +23,11 @@ x_ampl$Topt # 67.90424
 (x <- fixprec(n, J, N, S, total, kappa))
 (x_17 <- fixprec(n, J, N, S, total, kappa, active = c(1, 7)))
 
-x_17$T_eigenval
-x_ampl$Topt
-x_17$n_ih
+x_17
 x_ampl$n_ih
 
 which(x_ampl$n_ih == N)
-which(x_17$n_ih == N)
+which(x_17 == N)
 
 # Przyklad (sctr vs ampl, v0) ----
 
@@ -51,10 +48,10 @@ for (n in nm:1) {
   x_ampl <- ampl_fixprec(n, J, N, S, total, kappa, model = model)
   x_spctr <- rfixprec(n, J, N, S, total, kappa)
   kkt_ampl <- check_kkt(x_ampl$n_ih, J, N, S, total, kappa, n, tol = 0.1)
-  kkt_x <- check_kkt(x_spctr, J, N, S, total, kappa, n)
+  kkt_spctr <- check_kkt(x_spctr, J, N, S, total, kappa, n)
   print(kkt_ampl)
-  print(kkt_x)
-  kkt_ampl_spctr[[n]] <- c(kkt_ampl, kkt_x)
+  print(kkt_spctr)
+  kkt_ampl_spctr[[n]] <- c(kkt_ampl, kkt_spctr)
 }
 
 kkt_ampl_spctr_big <- which(
@@ -93,7 +90,7 @@ for (n in nm:1) {
 
   # check the KKT
   check_kkt(x_spctr, J, N, S, total, kappa, n, active = active_spctr, tol = 10^-13)
-  kkt_spctr_actampl <- check_kkt(x_spctr_actampl$n_ih, J, N, S, total, kappa, n, active = active_ampl, tol = 10^-13)
+  kkt_spctr_actampl <- check_kkt(x_spctr_actampl, J, N, S, total, kappa, n, active = active_ampl, tol = 10^-13)
 
   # check_kkt(x_spctr, J, N, S, total, kappa, n, tol = 10^-11)
   if (length(active_spctr) == 0L) {
@@ -109,8 +106,6 @@ for (n in nm:1) {
 }
 
 # Przyklad (3d, spctr vs ampl) ----
-
-# Inne zbiory active, wiezy spelnione w obu przypadkach ale ampl mniej dokladnie.
 
 data_ampl <- file.path(path, "ampl/data/ampl_fixprec_3d_2.dat")
 data <- ampl_readData(data_ampl, model = model)
@@ -136,18 +131,35 @@ N[d]
 x_spctr_actampl <- fixprec(n, J, N, S, total, kappa, active = active_ampl)
 
 # check the KKT
-# To ponizsze prawie zawsze bedzie mniej dokaldne, AMPL tylko zidentyfikowac zb. active.
-# check_kkt(x_ampl$n_ih, J, N, S, total, kappa, n, active = active_ampl, tol = 10^-2) # 25404.1
-check_kkt(x_spctr, J, N, S, total, kappa, n, active = active_spctr, tol = 10^-10, details = TRUE) # 25404.19
-check_kkt(x_spctr_actampl$n_ih, J, N, S, total, kappa, n, active = active_ampl, tol = 10^-9, details = TRUE) # 25404.09
+# x_ampl$n_ih malo dokladne spelnienie wiezow => AMPL tylko do zidentyfikownia zb. active.
+check_kkt(x_ampl$n_ih, J, N, S, total, kappa, n, active = active_ampl, tol = 10^-5) # 157.2966
+check_kkt(x_spctr, J, N, S, total, kappa, n, active = active_spctr, tol = 10^-13, details = TRUE) # 157.2966
+check_kkt(x_spctr_actampl, J, N, S, total, kappa, n, active = active_ampl, tol = 10^-13, details = TRUE) # 157.2966
 
 # sprawdzenie n
-sum(x_spctr) - n # -1.818989e-12
-sum(x_spctr_actampl$n_ih) - n # -9.094947e-13
+sum(x_spctr) - n # 0
+sum(x_spctr_actampl) - n # 0
+
+# spradwdzenie krok po kroku
+# domena 3 nr ma takie same zbiory active
+active_ampl
+# [1]  3  5 10 11 13 14 15 17
+active_spctr
+# [1]  3  5 10 11 13 14 15 17
+act_d3 <- c(13, 14, 15, 17)
+which(fixprec(n, J, N, S, total, kappa, active = act_d3) >= N)
+# d1
+which(fixprec(n, J, N, S, total, kappa, active = c(act_d3, 3)) >= N)
+which(fixprec(n, J, N, S, total, kappa, active = c(act_d3, 3, 5)) >= N)
+# d2
+which(fixprec(n, J, N, S, total, kappa, active = c(act_d3, 10, 11)) >= N)
+# d1
+which(fixprec(n, J, N, S, total, kappa, active = c(act_d3, 10, 11, 3)) >= N)
+which(fixprec(n, J, N, S, total, kappa, active = c(act_d3, 10, 11, 3, 5)) >= N)
+all(fixprec(n, J, N, S, total, kappa, active = c(act_d3, 10, 11, 3, 5)) <= N)
+setequal(active_ampl, c(act_d3, 10, 11, 3, 5))
 
 # Przyklad (4d, spctr vs ampl) ----
-
-# Inne zbiory active, wiezy spelnione w obu przypadkach ale ampl mniej dokladnie.
 
 data_ampl <- file.path(path, "ampl/data/ampl_fixprec_4d.dat")
 data <- ampl_readData(data_ampl, model = model)
@@ -173,20 +185,15 @@ N[d]
 x_spctr_actampl <- fixprec(n, J, N, S, total, kappa, active = active_ampl)
 
 # check the KKT
-# To ponizsze prawie zawsze bedzie mniej dokaldne, AMPL tylko zidentyfikowac zb. active.
-# check_kkt(x_ampl$n_ih, J, N, S, total, kappa, n, active = active_ampl, tol = 10^-2) # 25404.1
-check_kkt(x_spctr, J, N, S, total, kappa, n, active = active_spctr, tol = 10^-10) # 25404.19
-check_kkt(x_spctr_actampl$n_ih, J, N, S, total, kappa, n, active = active_ampl, tol = 10^-9) # 25404.09
+check_kkt(x_ampl$n_ih, J, N, S, total, kappa, n, active = active_ampl, tol = 10^-1) # 25404.1
+check_kkt(x_spctr, J, N, S, total, kappa, n, active = active_spctr, tol = 10^-9) # 25404.09
+check_kkt(x_spctr_actampl, J, N, S, total, kappa, n, active = active_ampl, tol = 10^-9) # 25404.09
 
 # sprawdzenie n
-sum(x_spctr) - n # -1.818989e-12
-sum(x_spctr_actampl$n_ih) - n # -9.094947e-13
+sum(x_spctr) - n # -9.094947e-13
+sum(x_spctr_actampl) - n # -9.094947e-13
 
 # Przyklad (9d, spctr vs ampl) ----
-
-# Inne zbiory active, wiezy spelnione w obu przypadkach ale ampl mniej dokladnie.
-# Natomiast po identyfikowaniu zbioru active przez ampl i zastosowaniu do tego
-# zbioru podejscia spektralnego, T jest mniejesze (wiezy spelnione z ta sama dokl.)
 
 data_ampl <- file.path(path, "ampl/data/ampl_fixprec_9d_2.dat")
 data <- ampl_readData(data_ampl, model = model)
@@ -214,10 +221,10 @@ x_spctr_actampl <- fixprec(n, J, N, S, total, kappa, active = active_ampl)
 # check the KKT
 x_ampl$Topt # 36218
 check_kkt(x_ampl$n_ih, J, N, S, total, kappa, n, active = active_ampl, tol = 0.1) # 36218
-check_kkt(x_spctr, J, N, S, total, kappa, n, active = active_spctr, tol = 10^-12, details = T) # 36258.4
-check_kkt(x_spctr_actampl$n_ih, J, N, S, total, kappa, n, active = active_ampl, tol = 10^-12, details = TRUE) # 36218.02
+check_kkt(x_spctr, J, N, S, total, kappa, n, active = active_spctr, tol = 10^-11) # 36218.02
+check_kkt(x_spctr_actampl, J, N, S, total, kappa, n, active = active_ampl, tol = 10^-11) # 36218.02
 
 # sprawdzenie n
 sum(x_ampl$n_ih) - n # -6.726887e-05
-sum(x_spctr) - n # 0
-sum(x_spctr_actampl$n_ih) - n # 7.275958e-12
+sum(x_spctr) - n # 7.275958e-12
+sum(x_spctr_actampl) - n # 7.275958e-12
