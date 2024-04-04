@@ -1,11 +1,28 @@
 # Source functions ----
 
 library(rAMPL)
-path <- file.path("/Volumes/Dane/studia/doktoranckie/alokacja_optymalna/R_code/testy_algorytmow/fixprec/")
+path <- file.path("/Volumes/Dane/studia/doktoranckie/alokacja_optymalna/R_code/testy_algorytmow/rfixprec/")
 setwd(path)
-source(file.path(path, "functions/fixprec.R"))
+source(file.path(path, "functions/rfixprec.R"))
 source(file.path(path, "ampl/ampl_fixprec.R"))
 model <- file.path(path, "ampl/ampl_fixprec.mod")
+
+# Przyklad (2d, 2+2h) ----
+
+J <- c(2, 2)
+N <- c(100, 200, 150, 40)
+S <- c(10, 2, 50, 30)
+total <- c(2, 3)
+kappa <- c(0.4, 0.6)
+(rho <- total * sqrt(kappa))
+nmax(J, N, S) - 1 # 449
+n <- 350
+x_ampl <- ampl_fixprec(n, J, N, S, total, kappa, model = model)
+x_ampl$n_ih
+x_ampl$Topt
+
+round(rfixprec(n, J, N, S, total, kappa), 2)
+fixprec(n, J, N, S, total, kappa)
 
 # Przyklad (3d, 1>,7>) ----
 

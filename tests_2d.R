@@ -1,6 +1,6 @@
 library(rAMPL)
 
-path <- file.path("/Volumes/Dane/studia/doktoranckie/alokacja_optymalna/R_code/testy_algorytmow/fixprec/")
+path <- file.path("/Volumes/Dane/studia/doktoranckie/alokacja_optymalna/R_code/testy_algorytmow/rfixprec/")
 source(file.path(path, "ampl/ampl_fixprec.R"))
 model <- file.path(path, "ampl/ampl_fixprec.mod")
 

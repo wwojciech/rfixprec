@@ -1,5 +1,5 @@
 library(rAMPL)
-path <- file.path("/Volumes/Dane/studia/doktoranckie/alokacja_optymalna/R_code/testy_algorytmow/fixprec/ampl/")
+path <- file.path("/Volumes/Dane/studia/doktoranckie/alokacja_optymalna/R_code/testy_algorytmow/rfixprec/ampl/")
 
 # Setup the AMPL env.
 env <- new(Environment, "/Applications/AMPL")
