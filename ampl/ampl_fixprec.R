@@ -34,8 +34,8 @@ ampl_fixprec <- function(n, J, N, S, total, kappa,
     # STRATA
     set_STRATA <- ampl$getSet("STRATA")
     set_STRATA <- set_STRATA$getInstances()
-    for (i in seq_along(set_STRATA)) {
-      set_STRATA[[i]]$setValues(seq_len(J[i]))
+    for (d in seq_along(set_STRATA)) {
+      set_STRATA[[d]]$setValues(seq_len(J[d]))
     }
     # N
     param_N <- ampl$getParameter("N")
@@ -56,7 +56,7 @@ ampl_fixprec <- function(n, J, N, S, total, kappa,
 
   if (print_values) {
     print(set_DOMAINS$getValues())
-    print(sapply(set_STRATA, function(i) i$getValues()[[1]]))
+    print(sapply(set_STRATA, function(d) d$getValues()[[1]]))
     print(cbind(param_N$getValues(), S = param_S$getValues()[, "S"]))
     print(cbind(param_total$getValues(), kappa = param_kappa$getValues()[, "kappa"]))
     cat(sprintf("Total sample size n: %g\n", param_n$getValues()))
@@ -84,12 +84,12 @@ ampl_fixprec <- function(n, J, N, S, total, kappa,
   var_base_variance <- ampl$getObjective("base_variance")
   var_x <- ampl$getVariable("x")
   Topt <- var_base_variance$value()
-  nopt <- var_x$getValues()[, "x.val"]
+  n_opt <- var_x$getValues()[, "x.val"]
 
   # Stop the AMPL engine.
   ampl$close()
 
-  list(Topt = Topt, n_ih = nopt, ampl_out = ampl_out)
+  list(Topt = Topt, n_dh = n_opt, ampl_out = ampl_out)
 }
 
 ampl_readData <- function(data = "ampl_fixprec_9d_2.dat", model = "ampl_fixprec.mod") {

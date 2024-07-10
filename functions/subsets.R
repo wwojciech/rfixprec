@@ -15,21 +15,21 @@ subsets <- function(x, len = NULL) {
 #' subsets_domains(J)
 #'
 subsets_domains <- function(J) {
-  indices_i <- lseq_len(J)
-  subsets_i <- lapply(indices_i, subsets)
-  subsets_i <- subsets_i[lengths(subsets_i) != 0] # remove NULL (occurs if 1s are in J)
-  if (is_empty(subsets_i)) {
+  indices_d <- lseq_len(J)
+  subsets_d <- lapply(indices_d, subsets)
+  subsets_d <- subsets_d[lengths(subsets_d) != 0] # remove NULL (occurs if 1s are in J)
+  if (length(subsets_d) == 0L) {
     return(NULL)
   }
 
-  subsets1 <- do.call(c, subsets_i)
+  subsets1 <- do.call(c, subsets_d)
   J <- J[J != 1] # remove domains with 1 stratum
   subsets2 <- if (length(J) == 1L) {
     NULL
   } else {
     crossjoin_J <- subsets(seq_along(J), 2:length(J)) # combination of elements of J.
     subsets2 <- lapply(crossjoin_J, function(x) {
-      cj <- do.call(expand.grid, subsets_i[x])
+      cj <- do.call(expand.grid, subsets_d[x])
       colnames(cj) <- NULL
       split(cj, seq(nrow(cj)))
     })
@@ -40,13 +40,13 @@ subsets_domains <- function(J) {
   all_subsets <- c(list(NULL), subsets1, subsets2)
 
   # verification
-  combn_in_i <- 2^J - 2
-  if (length(combn_in_i) == 1L) {
-    combn_in_i <- c(0, combn_in_i) # since combn() works differently for scalar x.
+  combn_in_d <- 2^J - 2
+  if (length(combn_in_d) == 1L) {
+    combn_in_d <- c(0, combn_in_d) # since combn() works differently for scalar x.
   }
   no_all_subsets <- sum(
     1,
-    sapply(seq_along(J), function(i) sum(combn(combn_in_i, i, prod)))
+    sapply(seq_along(J), function(d) sum(combn(combn_in_d, d, prod)))
   )
   if (length(all_subsets) != no_all_subsets) {
     stop("Zle obliczone podzbiory")

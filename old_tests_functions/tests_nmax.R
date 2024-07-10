@@ -3,7 +3,7 @@
 library(rAMPL)
 path <- file.path("/Volumes/Dane/studia/doktoranckie/alokacja_optymalna/R_code/testy_algorytmow/rfixprec/")
 setwd(path)
-source(file.path(path, "functions/rfixprec.R"))
+source(file.path(path, "old_tests_functions/rfixprec_nmax.R"))
 source(file.path(path, "ampl/ampl_fixprec.R"))
 model <- file.path(path, "ampl/ampl_fixprec.mod")
 
