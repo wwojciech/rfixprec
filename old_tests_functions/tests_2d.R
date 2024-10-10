@@ -334,9 +334,9 @@ total <- c(2, 3)
 kappa <- c(0.4, 0.6)
 (n <- nmax(J, N, S) - 1)
 
-ampl_alloc <- ampl_fixprec(n, J = c(2, 2), N, S, total, kappa, model = model)
+ampl_alloc <- ampl_fixprec(n, H_ss = c(2, 2), N, S, total, kappa, model = model)
 ampl_alloc$Topt
-ampl_alloc$n_ih
+ampl_alloc$n_dh
 
 (x <- fixprec(n, J, N, S, total, kappa))
 # 162.47371  42.55264 142.98313 179.99052 (1>, 3>)
@@ -346,7 +346,7 @@ ampl_alloc$n_ih
 (x_1 <- fixprec(n, J, N, S, total, kappa, active = 1, details = TRUE))
 x_1$T_eigenval
 ampl_alloc$Topt
-ampl_alloc$n_ih
+ampl_alloc$n_dh
 x_1$n_ih
 # 140.0000 106.8521 124.4665 156.6814 (OK)
 # T = 40.50748 (optimal)

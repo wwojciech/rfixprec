@@ -13,7 +13,7 @@ ampl_output_handler_ipopt <- function(x) {
   }
 }
 
-ampl_fixprec <- function(n, J, N, S, total, kappa,
+ampl_fixprec <- function(n, H_ss, N, S, total, kappa, J = NULL,
                          data = NULL,
                          model = "ampl_fixprec.mod",
                          print_values = FALSE,
@@ -30,12 +30,17 @@ ampl_fixprec <- function(n, J, N, S, total, kappa,
   } else {
     # Set values of the parameters.
     set_DOMAINS <- ampl$getSet("DOMAINS")
-    set_DOMAINS$setValues(seq_along(J))
+    set_DOMAINS$setValues(seq_along(H_ss))
     # STRATA
     set_STRATA <- ampl$getSet("STRATA")
     set_STRATA <- set_STRATA$getInstances()
     for (d in seq_along(set_STRATA)) {
-      set_STRATA[[d]]$setValues(seq_len(J[d]))
+      set_STRATA[[d]]$setValues(seq_len(H_ss[d]))
+    }
+    # J
+    if (!is.null(J)) {
+      set_DOMAINS_N <- ampl$getSet("DOMAINS_N")
+      set_DOMAINS_N$setValues(J)
     }
     # N
     param_N <- ampl$getParameter("N")
@@ -57,6 +62,7 @@ ampl_fixprec <- function(n, J, N, S, total, kappa,
   if (print_values) {
     print(set_DOMAINS$getValues())
     print(sapply(set_STRATA, function(d) d$getValues()[[1]]))
+    print(set_DOMAINS_N$getValues())
     print(cbind(param_N$getValues(), S = param_S$getValues()[, "S"]))
     print(cbind(param_total$getValues(), kappa = param_kappa$getValues()[, "kappa"]))
     cat(sprintf("Total sample size n: %g\n", param_n$getValues()))
@@ -108,8 +114,8 @@ ampl_readData <- function(data = "ampl_fixprec_9d_2.dat", model = "ampl_fixprec.
   param_kappa <- ampl$getParameter("kappa")
   param_n <- ampl$getParameter("n")
 
-  J <- sapply(set_STRATA, function(i) nrow(i$getValues()))
-  names(J) <- NULL
+  H_ss <- sapply(set_STRATA, function(i) nrow(i$getValues()))
+  names(H_ss) <- NULL
   N <- param_N$getValues()[, "N"]
   S <- param_S$getValues()[, "S"]
   total <- param_total$getValues()[, "total"]
@@ -119,5 +125,5 @@ ampl_readData <- function(data = "ampl_fixprec_9d_2.dat", model = "ampl_fixprec.
   # Stop the AMPL engine.
   ampl$close()
 
-  list(J = J, n = n, N = N, S = S, total = total, kappa = kappa)
+  list(H_ss = H_ss, n = n, N = N, S = S, total = total, kappa = kappa)
 }

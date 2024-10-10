@@ -29,7 +29,7 @@
 fixprec <- function(n, J, N, S, total, kappa = NULL, active = NULL, details = FALSE) {
   if (n >= nmax(J, N, S)) {
     # stop("total sample size n is too large")
-    warning("total sample size n is too large")
+    # warning("total sample size n is too large")
   }
   if (is.null(kappa)) {
     kappa <- rep(1 / length(J), length(J))
@@ -58,7 +58,8 @@ fixprec <- function(n, J, N, S, total, kappa = NULL, active = NULL, details = FA
   v <- eigenout$vectors[, 1] # corresponding eigenvector
   if (T_eigenval <= 0) {
     # stop("largest eigenvalue is not strictly positive - solution does not exist!")
-    warning("largest eigenvalue is not strictly positive")
+    # warning("largest eigenvalue is not strictly positive")
+    print("largest eigenvalue is not strictly positive")
   }
   if (any(diff(sign(v)) != 0)) {
     stop("eigenvector containts entries of a different sign")

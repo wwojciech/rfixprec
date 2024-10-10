@@ -3,6 +3,7 @@
 
 set DOMAINS;
 set STRATA {DOMAINS}; # strata labels for each domain
+set DOMAINS_N default DOMAINS; # domain labales for which x <= N must be satisfied, subset of DOMAINS
 
 param N {d in DOMAINS, STRATA[d]} > 0 integer;
 param S {d in DOMAINS, STRATA[d]} > 0;
@@ -21,7 +22,9 @@ param c {d in DOMAINS} = (1/rho[d]^2) * sum {h in STRATA[d]} N[d, h] * S[d, h]^2
 # Optimization problem
 
 var T >= 0;
-var x {d in DOMAINS, h in STRATA[d]} >= 0, <= N[d,h];
+#var T;
+var x {d in DOMAINS, h in STRATA[d]} >= 0;
+# var x {d in DOMAINS, h in STRATA[d]} >= 0, <= N[d,h];
 
 minimize base_variance: T;
 
@@ -30,4 +33,7 @@ subject to total_sample_size:
   
 subject to Td {d in DOMAINS}:
   sum {h in STRATA[d]} (A[d, h]^2 / x[d, h]) - c[d] = T;
+  
+subject to strata_sizes {d in DOMAINS_N, h in STRATA[d]}:
+  x[d, h] <= N[d, h];
   
