@@ -27,11 +27,10 @@ fixprec <- function(n, H_ss, N, S, total, kappa = NULL) {
   if (is.null(kappa)) {
     kappa <- rep(1 / length(H_ss), length(H_ss))
   }
-
   rho <- total * sqrt(kappa)
   rho2 <- total^2 * kappa
 
-  # strata domain indicators,
+  # stratum-domain indicators,
   # e.g. for 2 domains with 4 and 2 strata: 1 1 1 1 2 2
   H_di <- H_domain_indicators(H_ss)
 
@@ -48,8 +47,7 @@ fixprec <- function(n, H_ss, N, S, total, kappa = NULL) {
 
   s.vec <- n * v / as.numeric(t(a.vec) %*% v)
   A <- (N * S) / rep(rho, table(H_di)) # brackets due to finite-prec arithmetic!
-  x <- rep(s.vec, table(H_di)) * A
-  x
+  rep(s.vec, table(H_di)) * A
 }
 
 #' FIXPREC algorithm (version that accepts active strata and with debug)
