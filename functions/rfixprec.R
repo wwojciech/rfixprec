@@ -161,7 +161,7 @@ fixprec_act <- function(n, H_ss, N, S, total, kappa = NULL, active = NULL, detai
 #' @inheritParams fixprec
 #' @param J vector of domain indices. Specifies domains for which the allocated
 #'   samples should preserve strata sizes. For domains other than those specified
-#'   in `J`, allocations may exceeds strata sizes.
+#'   in `J`, allocations may exceed strata sizes.
 #'
 #' @examples
 #' H_ss <- c(2, 2, 3) # three domains with 2, 2, and 3 strata respectively
@@ -289,7 +289,9 @@ rfixprec_iter <- function(n, H_ss, N, S, total, kappa = NULL, ref_domain = 1L) {
 
 # DIAGNOSTIC FUNCTIONS ----
 
-#' Check KKT conditions for FIXPREC problem.
+#' Check KKT conditions for problem of equal-precision optimal allocation in
+#' single-stage sampling with domains and strata in domains (allocations
+#' do not exceed strata sizes)
 #'
 #' @inheritParams rfixprec
 #' @param active global indices of forced take-max strata.

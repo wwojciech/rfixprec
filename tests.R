@@ -44,7 +44,7 @@ kkt <- sapply(all_subsets, function(i) {
 })
 kkt
 kkt[which.min(kkt)]
-x_ampl <- ampl_fixprec(n, H_ss, N, S, total, kappa, J = 1, model = model)
+x_ampl <- ampl_fixprec(n, H_ss, N, S, total, kappa, model = model, J = 1)
 x_ampl$n_dh
 x_ampl$Topt
 
@@ -60,7 +60,7 @@ setNames(fixprec_act(n, H_ss, N, S, total, kappa, c(2, 4, 1, 3)), H_names)
 (x <- setNames(fixprec_act(n, H_ss, N, S, total, kappa, c(2, 4, 1, 3, 5)), H_names))
 check_kkt(x, H_ss, N, S, total, kappa, n, J = 1, tol = 10^-2, details = TRUE)
 
-(x_ampl <- ampl_fixprec(n, H_ss, N, S, total, kappa, model = model, 1))
+(x_ampl <- ampl_fixprec(n, H_ss, N, S, total, kappa, model = model, J = 1))
 check_kkt(x_ampl$n_dh, H_ss, N, S, total, kappa, n, J = 1, tol = 10^-2, details = TRUE)
 # Restoration Phase Failed.
 
