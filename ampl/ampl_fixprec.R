@@ -168,7 +168,15 @@ ampl_readData <- function(data = "ampl_fixprec_9d_2.dat", model = "ampl_fixprec.
   total <- param_total$getValues()[, "total"]
   kappa <- param_kappa$getValues()[, "kappa"]
   n <- param_n$getValues()[, "n"]
-  M <- param_M$getValues()[, "M"]
+
+  M <- tryCatch(
+    {
+      param_M$getValues()[, "M"] # it throws the error if M not specified
+    },
+    error = function(e) {
+      NULL
+    }
+  )
 
   # Stop the AMPL engine.
   ampl$close()

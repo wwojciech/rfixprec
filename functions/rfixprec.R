@@ -5,12 +5,12 @@
 #' Function for equal-precision optimal allocation in single-stage sampling
 #' with domains and strata in domains.
 #'
-#' @param n total sample size
-#' @param H_ss vector of strata sizes in domains
-#' @param N population sizes
-#' @param S population standard deviations of surveyed variable
-#' @param total totals of surveyed variable in domains
-#' @param kappa priority weights for domains
+#' @param n total sample size.
+#' @param H_ss vector of strata sizes in domains.
+#' @param N population sizes.
+#' @param S population standard deviations of surveyed variable.
+#' @param total totals of surveyed variable in domains.
+#' @param kappa priority weights for domains.
 #'
 #' @examples
 #' H_ss <- c(2, 2, 3) # strata sizes, three domains with 2, 2, and 3 strata respectively
@@ -37,6 +37,7 @@ fixprec <- function(n, H_ss, N, S, total, kappa = NULL) {
   a.vec <- as.matrix(tapply(N * S, H_di, sum) / rho)
   c.vec <- tapply(N * S^2, H_di, sum) / rho2 # - b (b = 0 if M = N)
   D.matrix <- (a.vec %*% t(a.vec)) / n - diag(c.vec, nrow = length(c.vec))
+  # print(D.matrix)
 
   eigen_decomp <- eigen(D.matrix, symmetric = TRUE)
   lambda <- eigen_decomp$values[1] # largest eigenvalue
@@ -60,7 +61,7 @@ fixprec <- function(n, H_ss, N, S, total, kappa = NULL) {
 #'   They are effectively removed from the population. It can happen that
 #'   whole domain will be removed - then the dim of D matrix is decreased
 #'   accordingly.
-#' @param details detailed debug output
+#' @param details detailed debug output.
 #'
 #' @examples
 #' H_ss <- c(2, 2) # two domains with 2 strata each.
@@ -363,6 +364,7 @@ check_kkt <- function(x, H_ss, N, S, total, kappa, n, J = seq_along(H_ss),
 #' Maximum allowed total sample size so that D is positive
 #'
 #' @inheritParams fixprec
+#'
 #' @details
 #' See (16) from JW 2019. It is usually less than sum(N).
 #'
@@ -403,6 +405,7 @@ H_domain_indicators <- function(H) {
 #' @param H_ss vector of strata sizes in domains
 #'
 #' @return A `list` with globally unique strata indices in domains.
+#'
 #' @examples
 #' H_ss <- c(2, 2, 3) # three domains with 2, 2, and 3 strata respectively
 #' H_s2i(H_ss)
@@ -413,4 +416,81 @@ H_s2i <- function(H_ss) {
     cumsum(H_ss), H_ss,
     SIMPLIFY = FALSE
   )
+}
+
+# PROTOTYPES (under testing) ----
+
+#' FIXPREC algorithm for upper bounds M <= N (prototype)
+#'
+#' Function for equal-precision optimal allocation in single-stage sampling
+#' with domains and strata in domains.
+#'
+#' @inheritParams fixprec
+#' @param M sample size upper bounds, defaults to N.
+#' @param U take-max strata global indices.
+#'
+#' @examples
+#' H_ss <- c(5, 2)
+#' H_names <- rep(seq_along(H_ss), times = H_ss)
+#' N <- c(100, 100, 100, 100, 100, 100, 100)
+#' S <- c(154, 178, 134, 213, 124, 102, 12)
+#' M <- c(80, 90, 70, 40, 10, 90, 100)
+#' names(N) <- H_names
+#' names(S) <- H_names
+#' names(M) <- H_names
+#' total <- c(13, 2)
+#' kappa <- c(0.8, 0.2)
+#' (rho <- total * sqrt(kappa))
+#' n <- 150
+#'
+#' library(rAMPL)
+#' source(file.path("functions/rfixprec.R"))
+#' source(file.path("ampl/ampl_fixprec.R"))
+#' model <- file.path("ampl/ampl_fixprec.mod")
+#' x_ampl <- ampl_fixprec(n, H_ss, N, S, total, kappa, model = model, M = M)
+#' x_ampl$n_dh
+#' # 12.754880 14.742653 11.098402 17.641490 10.000000 74.945462  8.817113
+#'
+#' fixprec_M(n, H_ss, N, S, total, kappa, M = M, U = 5)
+#' #         1         1         1         1         1         2         2
+#' # 12.754880 14.742653 11.098402 17.641490 10.000000 74.945462  8.817113
+#'
+fixprec_M <- function(n, H_ss, N, S, total, kappa = NULL, M = N, U = NULL) {
+  ndomains <- length(H_ss)
+  if (is.null(kappa)) {
+    kappa <- rep(1 / ndomains, ndomains)
+  }
+  rho <- total * sqrt(kappa)
+  rho2 <- total^2 * kappa
+
+  # stratum-domain indicators,
+  # e.g. for 2 domains with 4 and 2 strata: 1 1 1 1 2 2
+  H_di <- H_domain_indicators(H_ss)
+
+  # ASSUMPTION: works only if U does not contain whole domain!
+  if (is.null(U)) {
+    n_adjusted <- n
+    a.vec <- as.matrix(tapply(N * S, H_di, sum) / rho)
+    c.vec <- tapply(N * S^2, H_di, sum) / rho2
+  } else {
+    n_adjusted <- n - sum(M[U])
+    a.vec <- as.matrix(tapply(N[-U] * S[-U], H_di[-U], sum) / rho)
+    c.vec_b <- vector(mode = "numeric", length = ndomains)
+    c.vec_b[H_di[U]] <- tapply(N[U]^2 * S[U]^2 / M[U], H_di[U], sum)
+    c.vec <- (tapply(N * S^2, H_di, sum) - c.vec_b) / rho2
+  }
+  D.matrix <- (a.vec %*% t(a.vec)) / n_adjusted - diag(c.vec, nrow = length(c.vec))
+
+  eigen_decomp <- eigen(D.matrix, symmetric = TRUE)
+  lambda <- eigen_decomp$values[1] # largest eigenvalue
+  v <- eigen_decomp$vectors[, 1] # corresponding eigenvector
+  if (any(diff(sign(v)) != 0)) {
+    stop("eigenvector containts entries of a different sign")
+  }
+
+  s.vec <- n_adjusted * v / as.numeric(t(a.vec) %*% v)
+  A <- (N * S) / rep(rho, table(H_di)) # brackets due to finite-prec arithmetic!
+  x <- rep(s.vec, table(H_di)) * A
+  x[U] <- M[U]
+  x
 }
