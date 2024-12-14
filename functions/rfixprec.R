@@ -24,6 +24,9 @@
 #' # 162.46200  42.54957 143.14020 180.18824 203.07887  20.59596  75.98516
 #'
 fixprec <- function(n, H_ss, N, S, total, kappa = NULL) {
+  if (empty(H_ss)) {
+    return(numeric(0))
+  }
   if (is.null(kappa)) {
     kappa <- rep(1 / length(H_ss), length(H_ss))
   }
@@ -161,6 +164,7 @@ fixprec_act <- function(n, H_ss, N, S, total, kappa = NULL, active = NULL, detai
 #' @param J vector of domain indices. Specifies domains for which the allocated
 #'   samples should preserve strata sizes. For domains other than those specified
 #'   in `J`, allocations may exceed strata sizes.
+#'   If `J` is `NULL`, then `J` is treated as it would have contain all domains.
 #'
 #' @examples
 #' H_ss <- c(2, 2, 3) # three domains with 2, 2, and 3 strata respectively
@@ -288,6 +292,98 @@ rfixprec_iter <- function(n, H_ss, N, S, total, kappa = NULL, ref_domain = 1L) {
 
 # DIAGNOSTIC FUNCTIONS ----
 
+#' Compute the value of the objective function and constraint functions
+#' for a given allocation.
+#'
+#' @inheritParams rfixprec
+#'
+#' @examples
+#' H_ss <- c(2, 2) # two domains with 2 strata each.
+#' N <- c(140, 110, 135, 190)
+#' S <- sqrt(c(180, 20, 5, 4))
+#' total <- c(2, 3)
+#' kappa <- c(0.4, 0.6)
+#' n <- 500
+#'
+#' (x <- fixprec(n, H_ss, N, S, total, kappa))
+#' compute_obj_cnstr(x, H_ss, N, S, total, kappa, n)
+#' compute_obj_cnstr(x, H_ss, N, S, total, kappa, n, 1)
+#' compute_obj_cnstr(x, H_ss, N, S, total, kappa, n, 2)
+#' compute_obj_cnstr(x, H_ss, N, S, total, kappa, n, NULL)
+#'
+compute_obj_cnstr <- function(x, H_ss, N, S, total, kappa, n, J = numeric(0)) {
+  # TODO: describe in the man that J can be empty.
+
+  # Topt (objective)
+  Td_notscaled <- tapply(N^2 / x * S^2 - N * S^2, H_domain_indicators(H_ss), sum)
+  Topt <- sum(Td_notscaled) / sum(total^2 * kappa)
+
+  # Td related (Td/kappa_d - Topt)
+  Td <- Td_notscaled / total^2
+  Td_o_kappad_min_T <- Td / kappa - Topt
+  # note: Td / kappa = Td_notscaled / rho2, where rho2 <- total^2 * kappa
+
+  # sum_x_n
+  sumx_min_n <- sum(x) - n
+
+  rval <- list(Topt = Topt, Td_o_kappad_min_T = Td_o_kappad_min_T, sumx_min_n = sumx_min_n)
+
+  # N
+  if (nonempty(J) || is.null(J)) {
+    if (is.null(J)) {
+      J <- seq_along(H_ss)
+    }
+    strata_check_N <- unlist(H_s2i(H_ss)[J])
+    x_min_N <- x[strata_check_N] - N[strata_check_N]
+    names_x <- unlist(lapply(seq_along(H_ss), function(d) paste0(H_s2i(H_ss)[[d]], " (d=", d, ")")))
+    names(x_min_N) <- names_x[strata_check_N]
+    rval <- c(rval, list(x_min_N = x_min_N))
+  }
+
+  rval
+}
+
+#' Compute the value of the objective function and constraint functions
+#' for a given allocation.
+#'
+#' @inheritParams check_obj_cnstr
+#' @param tol_max comparison maximum tolerance in adaptive selection of tolerance.
+#'  See `is_equal` function.
+#'
+#' @examples
+#' H_ss <- c(2, 2) # two domains with 2 strata each.
+#' N <- c(140, 110, 135, 190)
+#' S <- sqrt(c(180, 20, 5, 4))
+#' total <- c(2, 3)
+#' kappa <- c(0.4, 0.6)
+#' n <- 500
+#'
+#' (x <- fixprec(n, H_ss, N, S, total, kappa))
+#' check_obj_cnstr(x, H_ss, N, S, total, kappa, n)
+#' check_obj_cnstr(x, H_ss, N, S, total, kappa, n, 1)
+#' check_obj_cnstr(x, H_ss, N, S, total, kappa, n, 2)
+#' check_obj_cnstr(x, H_ss, N, S, total, kappa, n, NULL)
+#'
+check_obj_cnstr <- function(x, H_ss, N, S, total, kappa, n, J = numeric(0), tol_max = 0.1) {
+  oc <- compute_obj_cnstr(x, H_ss, N, S, total, kappa, n, J)
+
+  is_Td_eq_kappa_T <- is_equal(oc$Td_o_kappad_min_T, 0, tol_max = tol_max)
+  is_sum_x_eq_n <- is_equal(oc$sumx_min_n, 0, tol_max = tol_max)
+
+  rval <- list(
+    Topt = oc$Topt,
+    is_sum_x_eq_n = is_sum_x_eq_n,
+    is_Td_eq_kappa_T = is_Td_eq_kappa_T
+  )
+
+  if (nonempty(J) || is.null(J)) {
+    is_x_leq_N <- oc$x_min_N <= 0
+    rval <- c(rval, list(is_x_leq_N = is_x_leq_N))
+  }
+
+  rval
+}
+
 #' Check KKT conditions for problem of equal-precision optimal allocation in
 #' single-stage sampling with domains and strata in domains (allocations
 #' do not exceed strata sizes)
@@ -295,7 +391,8 @@ rfixprec_iter <- function(n, H_ss, N, S, total, kappa = NULL, ref_domain = 1L) {
 #' @inheritParams rfixprec
 #' @param active global indices of forced take-max strata.
 #' @param s values of functions s_d, for each domain d (optional).
-#' @param tol number comparison tolerance.
+#' @param tol_max comparison maximum tolerance in adaptive selection of tolerance.
+#'  See `is_equal` function.
 #' @param details should detailed output be returned?
 #'
 #' @return If `details` is `FALSE`, it returns optimal value of T
@@ -315,15 +412,9 @@ rfixprec_iter <- function(n, H_ss, N, S, total, kappa = NULL, ref_domain = 1L) {
 #' check_kkt(x, H_ss, N, S, total, kappa, n, details = TRUE)
 #'
 check_kkt <- function(x, H_ss, N, S, total, kappa, n, J = seq_along(H_ss),
-                      active = NULL, s = NULL, tol = 10^-9, details = FALSE) {
-  Td_notscaled <- tapply(N^2 / x * S^2 - N * S^2, H_domain_indicators(H_ss), sum)
-  Td <- Td_notscaled / total^2
-  T_opt <- sum(Td_notscaled) / sum(total^2 * kappa)
-  is_Td_eq_kappa_T <- Td - kappa * T_opt < tol
-  is_sum_x_eq_n <- sum(x) - n < tol
-  strata_check_N <- unlist(H_s2i(H_ss)[J])
-  is_x_leq_N <- x[strata_check_N] <= N[strata_check_N]
-  names(is_x_leq_N) <- strata_check_N
+                      active = NULL, s = NULL, tol_max = 0.1, details = FALSE) {
+  # value of the objective function and flags whether the constraints are satisfied
+  oc <- check_obj_cnstr(x, H_ss, N, S, total, kappa, n, J, tol_max)
 
   # check if mu_ih is non-negative for active constraints
   if (empty(active)) {
@@ -343,18 +434,17 @@ check_kkt <- function(x, H_ss, N, S, total, kappa, n, J = seq_along(H_ss),
 
   if (details) {
     list(
-      T_opt = T_opt,
-      Td = Td,
-      is_Td_eq_kappa_T = is_Td_eq_kappa_T,
-      is_sum_x_eq_n = is_sum_x_eq_n,
-      is_x_leq_N = is_x_leq_N,
+      Topt = oc$Topt,
+      is_sum_x_eq_n = oc$is_sum_x_eq_n,
+      is_Td_eq_kappa_T = oc$is_Td_eq_kappa_T,
+      is_x_leq_N = oc$is_x_leq_N,
       is_mu_dh_nonneg = is_mu_dh_nonneg,
       active = active,
       active_len = length(active)
     )
   } else {
-    if (all(is_Td_eq_kappa_T, is_sum_x_eq_n, is_x_leq_N, is_mu_dh_nonneg)) {
-      T_opt
+    if (all(oc$is_Td_eq_kappa_T, oc$is_sum_x_eq_n, oc$is_x_leq_N, is_mu_dh_nonneg)) {
+      oc$Topt
     } else {
       NA_real_
     }
@@ -377,9 +467,7 @@ check_kkt <- function(x, H_ss, N, S, total, kappa, n, J = seq_along(H_ss),
 #'
 nmax <- function(H_ss, N, S) {
   H_di <- H_domain_indicators(H_ss)
-  n_bound <- sum(tapply(N * S, H_di, sum)^2 / tapply(N * S^2, H_di, sum))
-  n_bound_floor <- floor(n_bound)
-  ifelse(n_bound == n_bound_floor, n_bound - 1, n_bound_floor)
+  sum(tapply(N * S, H_di, sum)^2 / tapply(N * S^2, H_di, sum))
 }
 
 # HELPERS ----
@@ -416,6 +504,40 @@ H_s2i <- function(H_ss) {
     cumsum(H_ss), H_ss,
     SIMPLIFY = FALSE
   )
+}
+
+#' Check if `x1` and `x2` are equal up to some tolerance level.
+#' The tolerance level is found adaptive in the range
+#' `10^((-19):(tol_max))`
+#'
+#' @param x1 numeric vector, fist value to compare
+#' @param x1 numeric vector, second value to compare
+#' @param tol_max integer, specified as a power of `10`
+#'
+#' @examples
+#' is_equal(c(3, 4), c(3, 4))
+#' is_equal(c(3, 4), c(3.01, 4.11))
+#' is_equal(c(3, 4), c(3.01, 4.11), tol_max = 0)
+#'
+is_equal <- function(x1, x2, tol_max = -1) {
+  tolerances <- 10^((-19):(tol_max))
+
+  abs_diff <- abs(x1 - x2)
+  results <- rep(setNames(FALSE, paste0("tol=1e", tol_max)), length(abs_diff))
+  to_check <- seq_along(abs_diff)
+
+  for (tol in tolerances) {
+    res <- which(abs_diff[to_check] <= tol)
+    if (nonempty(res)) {
+      results[to_check[res]] <- TRUE
+      names(results)[to_check[res]] <- rep(paste0("tol=", tol), length(res))
+      to_check <- to_check[-res]
+    }
+    if (all(results)) {
+      break
+    }
+  }
+  results
 }
 
 # PROTOTYPES (under testing) ----

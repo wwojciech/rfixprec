@@ -68,8 +68,8 @@ ampl_fixprec <- function(n, H_ss, N, S, total, kappa, M = N, J = NULL,
     }
     # J
     if (!is.null(J)) {
-      set_DOMAINS_N <- ampl$getSet("DOMAINS_N")
-      set_DOMAINS_N$setValues(J)
+      set_DOMAINS_J <- ampl$getSet("DOMAINS_J")
+      set_DOMAINS_J$setValues(J)
     }
     # N
     param_N <- ampl$getParameter("N")
@@ -94,7 +94,7 @@ ampl_fixprec <- function(n, H_ss, N, S, total, kappa, M = N, J = NULL,
   if (print_values) {
     print(set_DOMAINS$getValues())
     print(sapply(set_STRATA, function(d) d$getValues()[[1]]))
-    print(set_DOMAINS_N$getValues())
+    print(set_DOMAINS_J$getValues())
     print(cbind(param_N$getValues(), param_M$getValues(), S = param_S$getValues()[, "S"]))
     print(cbind(param_total$getValues(), kappa = param_kappa$getValues()[, "kappa"]))
     cat(sprintf("Total sample size n: %g\n", param_n$getValues()))

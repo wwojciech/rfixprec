@@ -3,7 +3,7 @@
 
 set DOMAINS;
 set STRATA {DOMAINS}; # strata labels for each domain
-set DOMAINS_N default DOMAINS; # domain labales for which x <= N must be satisfied, subset of DOMAINS
+set DOMAINS_J default DOMAINS; # domain labels for which x <= N must be satisfied, subset of DOMAINS
 
 param N {d in DOMAINS, STRATA[d]} > 0 integer;
 param S {d in DOMAINS, STRATA[d]} > 0;
@@ -38,6 +38,6 @@ subject to total_sample_size:
 subject to Td {d in DOMAINS}:
   sum {h in STRATA[d]} (A[d, h]^2 / x[d, h]) - c[d] = T;
   
-subject to strata_sizes {d in DOMAINS_N, h in STRATA[d]}:
+subject to strata_sizes {d in DOMAINS_J, h in STRATA[d]}:
   x[d, h] <= M[d, h];
   

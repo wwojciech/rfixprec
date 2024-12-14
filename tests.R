@@ -27,20 +27,20 @@ x_ampl <- ampl_fixprec(n, H_ss, N, S, total, kappa, model = model, J = 1)
 x_ampl$n_dh
 # 100.00000 100.00000 100.00000 100.00000  99.79400 110.23695  12.96905
 x_ampl$Topt # 23.47558
-check_kkt(x_ampl$n_dh, H_ss, N, S, total, kappa, n, J = 1, tol = 10^-5)
+check_kkt(x_ampl$n_dh, H_ss, N, S, total, kappa, n, J = 1, tol_max = 10^-5)
 rfixprec(n, H_ss, N, S, total, kappa, J = 1)
 
 x_fixprec <- fixprec_act(n, H_ss, N, S, total, kappa, 1:4)
 x_fixprec
 # 100.00000 100.00000 100.00000 100.00000  99.79400 110.23695  12.96905
-check_kkt(x_fixprec, H_ss, N, S, total, kappa, n, J = 1, tol = 10^-12)
+check_kkt(x_fixprec, H_ss, N, S, total, kappa, n, J = 1, tol_max = 10^-12)
 
 # Testy dla wszystkich podzbiorow (poza cala domena)
 
 all_subsets <- subsets_domains(H_ss)
 kkt <- sapply(all_subsets, function(i) {
   x <- fixprec_act(n, H_ss, N, S, total, kappa, i)
-  check_kkt(x, H_ss, N, S, total, kappa, n, J = 1, tol = 10^-3)
+  check_kkt(x, H_ss, N, S, total, kappa, n, J = 1, tol_max = 10^-3)
 })
 kkt
 kkt[which.min(kkt)]
@@ -58,10 +58,10 @@ setNames(fixprec_act(n, H_ss, N, S, total, kappa), H_names)
 setNames(fixprec_act(n, H_ss, N, S, total, kappa, c(2, 4)), H_names)
 setNames(fixprec_act(n, H_ss, N, S, total, kappa, c(2, 4, 1, 3)), H_names)
 (x <- setNames(fixprec_act(n, H_ss, N, S, total, kappa, c(2, 4, 1, 3, 5)), H_names))
-check_kkt(x, H_ss, N, S, total, kappa, n, J = 1, tol = 10^-2, details = TRUE)
+check_kkt(x, H_ss, N, S, total, kappa, n, J = 1, tol_max = 10^-2, details = TRUE)
 
 (x_ampl <- ampl_fixprec(n, H_ss, N, S, total, kappa, model = model, J = 1))
-check_kkt(x_ampl$n_dh, H_ss, N, S, total, kappa, n, J = 1, tol = 10^-2, details = TRUE)
+check_kkt(x_ampl$n_dh, H_ss, N, S, total, kappa, n, J = 1, tol_max = 10^-2, details = TRUE)
 # Restoration Phase Failed.
 
 # Przyklad (nmax < n < sum(N)) ----
@@ -83,20 +83,20 @@ x_ampl <- ampl_fixprec(n, H_ss, N, S, total, kappa, model = model)
 x_ampl$n_dh
 # 89.95402 100.00000 78.27168 100.00000 72.43051 100.00000  64.34379
 x_ampl$Topt # 9974.714
-check_kkt(x_ampl$n_dh, H_ss, N, S, total, kappa, n, tol = 10^-2) # 9974.715
+check_kkt(x_ampl$n_dh, H_ss, N, S, total, kappa, n, tol_max = 10^-2) # 9974.715
 (x_fixprec <- fixprec_act(n, H_ss, N, S, total, kappa, c(2, 4, 6)))
 # 89.95401 100.00000  78.27167 100.00000  72.43050 100.00000  64.34381
-check_kkt(x_fixprec, H_ss, N, S, total, kappa, n, tol = 10^-11) # 9974.718
+check_kkt(x_fixprec, H_ss, N, S, total, kappa, n, tol_max = 10^-11) # 9974.718
 
 n <- 695
 x_ampl <- ampl_fixprec(n, H_ss, N, S, total, kappa, model = model)
 x_ampl$n_dh
 # 100 100 100 100 96.94939 100 98.05060
 x_ampl$Topt # 357.8548
-check_kkt(x_ampl$n_dh, H_ss, N, S, total, kappa, n, tol = 10^-2) # 357.8558
+check_kkt(x_ampl$n_dh, H_ss, N, S, total, kappa, n, tol_max = 10^-2) # 357.8558
 (x_fixprec <- fixprec_act(n, H_ss, N, S, total, kappa, c(1:4, 6)))
 # 100 100 100 100 96.94936 100 98.05064
-check_kkt(x_fixprec, H_ss, N, S, total, kappa, n, tol = 10^-13) # 357.8601
+check_kkt(x_fixprec, H_ss, N, S, total, kappa, n, tol_max = 10^-13) # 357.8601
 
 ## Algorytm zaproponowany przez P. Profesora.
 
@@ -226,7 +226,7 @@ for (n in sum(N):1) {
   cat("\t n: ", n, "\n")
   x_ampl <- ampl_fixprec(n, H_ss, N, S, total, kappa, model = model)
   x_spctr_iter <- rfixprec_iter(n, H_ss, N, S, total, kappa)
-  kkt_ampl <- check_kkt(x_ampl$n_dh, H_ss, N, S, total, kappa, n, tol = 0.1)
+  kkt_ampl <- check_kkt(x_ampl$n_dh, H_ss, N, S, total, kappa, n, tol_max = 0.1)
   kkt_spctr <- check_kkt(x_spctr_iter, H_ss, N, S, total, kappa, n)
   print(kkt_ampl)
   print(kkt_spctr)
@@ -274,10 +274,10 @@ for (n in (sum(N) - 1):1) {
   x_spctr_actampl <- fixprec_act(n, H_ss, N, S, total, kappa, active = active_ampl)
 
   # check the KKT
-  check_kkt(x_spctr_iter, H_ss, N, S, total, kappa, n, active = active_spctr, tol = 10^-13)
-  kkt_spctr_actampl <- check_kkt(x_spctr_actampl, H_ss, N, S, total, kappa, n, active = active_ampl, tol = 10^-13)
+  check_kkt(x_spctr_iter, H_ss, N, S, total, kappa, n, active = active_spctr, tol_max = 10^-13)
+  kkt_spctr_actampl <- check_kkt(x_spctr_actampl, H_ss, N, S, total, kappa, n, active = active_ampl, tol_max = 10^-13)
 
-  # check_kkt(x_spctr_iter, H_ss, N, S, total, kappa, n, tol = 10^-11)
+  # check_kkt(x_spctr_iter, H_ss, N, S, total, kappa, n, tol_max = 10^-11)
   if (length(active_spctr) == 0L) {
     break
   }
@@ -323,9 +323,9 @@ x_spctr_actampl <- fixprec_act(n, H_ss, N, S, total, kappa, active = active_ampl
 
 # check the KKT
 # x_ampl$n_dh malo dokladne spelnienie wiezow => AMPL tylko do zidentyfikownia zb. active.
-check_kkt(x_ampl$n_dh, H_ss, N, S, total, kappa, n, active = active_ampl, tol = 10^-5) # 157.2966
-check_kkt(x_spctr_iter, H_ss, N, S, total, kappa, n, active = active_spctr, tol = 10^-13, details = TRUE) # 157.2966
-check_kkt(x_spctr_actampl, H_ss, N, S, total, kappa, n, active = active_ampl, tol = 10^-13, details = TRUE) # 157.2966
+check_kkt(x_ampl$n_dh, H_ss, N, S, total, kappa, n, active = active_ampl, tol_max = 10^-5) # 157.2966
+check_kkt(x_spctr_iter, H_ss, N, S, total, kappa, n, active = active_spctr, tol_max = 10^-13, details = TRUE) # 157.2966
+check_kkt(x_spctr_actampl, H_ss, N, S, total, kappa, n, active = active_ampl, tol_max = 10^-13, details = TRUE) # 157.2966
 
 # sprawdzenie n
 sum(x_spctr_iter) - n # 0
@@ -396,9 +396,9 @@ N[ampl_spctr_act_diff]
 x_spctr_actampl <- fixprec_act(n, H_ss, N, S, total, kappa, active = active_ampl)
 
 # check the KKT
-check_kkt(x_ampl$n_dh, H_ss, N, S, total, kappa, n, active = active_ampl, tol = 10^-1) # 25404.1
-check_kkt(x_spctr_iter, H_ss, N, S, total, kappa, n, active = active_spctr, tol = 10^-9) # 25404.09
-check_kkt(x_spctr_actampl, H_ss, N, S, total, kappa, n, active = active_ampl, tol = 10^-9) # 25404.09
+check_kkt(x_ampl$n_dh, H_ss, N, S, total, kappa, n, active = active_ampl, tol_max = 10^-1) # 25404.1
+check_kkt(x_spctr_iter, H_ss, N, S, total, kappa, n, active = active_spctr, tol_max = 10^-9) # 25404.09
+check_kkt(x_spctr_actampl, H_ss, N, S, total, kappa, n, active = active_ampl, tol_max = 10^-9) # 25404.09
 
 # sprawdzenie n
 sum(x_spctr_iter) - n # -9.094947e-13
@@ -453,9 +453,9 @@ x_spctr_actampl <- fixprec_act(n, H_ss, N, S, total, kappa, active = active_ampl
 
 # check the KKT
 x_ampl$Topt # 36218
-check_kkt(x_ampl$n_dh, H_ss, N, S, total, kappa, n, active = active_ampl, tol = 0.1) # 36218
-check_kkt(x_spctr_iter, H_ss, N, S, total, kappa, n, active = active_spctr, tol = 10^-11) # 36218.02
-check_kkt(x_spctr_actampl, H_ss, N, S, total, kappa, n, active = active_ampl, tol = 10^-11) # 36218.02
+check_kkt(x_ampl$n_dh, H_ss, N, S, total, kappa, n, active = active_ampl, tol_max = 0.1) # 36218
+check_kkt(x_spctr_iter, H_ss, N, S, total, kappa, n, active = active_spctr, tol_max = 10^-11) # 36218.02
+check_kkt(x_spctr_actampl, H_ss, N, S, total, kappa, n, active = active_ampl, tol_max = 10^-11) # 36218.02
 
 # sprawdzenie n
 sum(x_ampl$n_dh) - n # -6.726887e-05
