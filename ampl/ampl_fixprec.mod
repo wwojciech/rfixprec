@@ -19,9 +19,10 @@ param nmax = sum {d in DOMAINS} (sum {h in STRATA[d]} N[d, h]);
 # param n > 0, < nmax integer;
 param n > 0, <= nmax integer;
 
-param rho {d in DOMAINS} = total[d] * sqrt(kappa[d]); 
+param rho {d in DOMAINS} = total[d] * sqrt(kappa[d]);
+param rho2 {d in DOMAINS} = total[d]^2 * kappa[d];
 param A {d in DOMAINS, h in STRATA[d]} = (N[d, h] * S[d, h]) / rho[d];
-param c {d in DOMAINS} = (1/rho[d]^2) * sum {h in STRATA[d]} N[d, h] * S[d, h]^2;
+param c {d in DOMAINS} = (1/rho2[d]) * sum {h in STRATA[d]} N[d, h] * S[d, h]^2;
 
 # Optimization problem
 

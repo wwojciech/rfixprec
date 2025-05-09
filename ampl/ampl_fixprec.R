@@ -5,7 +5,7 @@
 #' specified upper bounds.
 #'
 #' @param n total sample size
-#' @param H_ss vector of strata sizes in domains
+#' @param H_counts vector of strata counts in domains.
 #' @param N population sizes
 #' @param S population standard deviations of surveyed variable
 #' @param total totals of surveyed variable in domains
@@ -14,7 +14,7 @@
 #' @param J vector of domain indices. Specifies domains for which the allocated
 #'   samples should preserve bounds specified in `M`. For domains other than
 #'   those specified in `J`, allocations may exceed `M`.
-#' @param data file path to .dat file (instead of `n`, `H_ss`, `N`, `S`, `total`,
+#' @param data file path to .dat file (instead of `n`, `H_counts`, `N`, `S`, `total`,
 #'   `kappa`, `M`.
 #' @param model file path to AMPL model specification file
 #' @param print_values should parameter values be printed out?
@@ -33,16 +33,16 @@
 #' x_ampl <- ampl_fixprec(data = data, model = model)
 #' x_ampl
 #'
-#' H_ss <- c(5, 2)
+#' H_counts <- c(5, 2)
 #' N <- c(100, 100, 100, 100, 100, 100, 100)
 #' S <- c(154, 178, 134, 213, 124, 102, 12)
 #' total <- c(13, 2)
 #' kappa <- c(0.8, 0.2)
 #' n <- 623
-#' x_ampl <- ampl_fixprec(n, H_ss, N, S, total, kappa, model = model)
+#' x_ampl <- ampl_fixprec(n, H_counts, N, S, total, kappa, model = model)
 #' x_ampl
 #'
-ampl_fixprec <- function(n, H_ss, N, S, total, kappa, M = N, J = NULL,
+ampl_fixprec <- function(n, H_counts, N, S, total, kappa, M = N, J = NULL,
                          data = NULL,
                          model = "ampl_fixprec.mod",
                          print_values = FALSE,
@@ -59,12 +59,12 @@ ampl_fixprec <- function(n, H_ss, N, S, total, kappa, M = N, J = NULL,
   } else {
     # Set values of the parameters.
     set_DOMAINS <- ampl$getSet("DOMAINS")
-    set_DOMAINS$setValues(seq_along(H_ss))
+    set_DOMAINS$setValues(seq_along(H_counts))
     # STRATA
     set_STRATA <- ampl$getSet("STRATA")
     set_STRATA <- set_STRATA$getInstances()
     for (d in seq_along(set_STRATA)) {
-      set_STRATA[[d]]$setValues(seq_len(H_ss[d]))
+      set_STRATA[[d]]$setValues(seq_len(H_counts[d]))
     }
     # J
     if (!is.null(J)) {
@@ -161,8 +161,8 @@ ampl_readData <- function(data = "ampl_fixprec_9d_2.dat", model = "ampl_fixprec.
   param_n <- ampl$getParameter("n")
   param_M <- ampl$getParameter("M")
 
-  H_ss <- sapply(set_STRATA, function(i) nrow(i$getValues()))
-  names(H_ss) <- NULL
+  H_counts <- sapply(set_STRATA, function(i) nrow(i$getValues()))
+  names(H_counts) <- NULL
   N <- param_N$getValues()[, "N"]
   S <- param_S$getValues()[, "S"]
   total <- param_total$getValues()[, "total"]
@@ -181,7 +181,14 @@ ampl_readData <- function(data = "ampl_fixprec_9d_2.dat", model = "ampl_fixprec.
   # Stop the AMPL engine.
   ampl$close()
 
-  list(H_ss = H_ss, n = n, M = M, N = N, S = S, total = total, kappa = kappa)
+  rho <- total * sqrt(kappa)
+  rho2 <- total^2 * kappa
+
+  list(
+    H_counts = H_counts, n = n, M = M, N = N, S = S,
+    total = total, kappa = kappa, rho = rho, rho2 = rho2,
+    nmax = nmax(H_counts, N, S)
+  )
 }
 
 # HELPERS ----
@@ -203,4 +210,25 @@ ampl_output_handler_ipopt <- function(x) {
   if (any(check)) {
     cat(gsub(pattern_check, "check failed:", x[check]))
   }
+}
+
+#' Maximum allowed total sample size so that D is positive
+#'
+#' @param H_counts vector of strata counts in domains.
+#' @param N population sizes.
+#' @param S population standard deviations of surveyed variable.
+#'
+#' @details
+#' See (16) from JW 2019. It is less than or equal to sum(N).
+#'
+#' @examples
+#' H_counts <- c(2, 2) # two domains with 2 strata each.
+#' N <- c(140, 110, 135, 190)
+#' S <- sqrt(c(180, 20, 5, 4))
+#' sum(N)
+#' nmax(H_counts, N, S)
+#'
+nmax <- function(H_counts, N, S) {
+  H_dind <- H_cnt2dind(H_counts)
+  sum(tapply(N * S, H_dind, sum)^2 / tapply(N * S^2, H_dind, sum))
 }
