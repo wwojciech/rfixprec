@@ -99,7 +99,7 @@ check_kkt(x_ampl$n_dh, H_counts, N, S, total, kappa, n, J = 1, tol_max = -3)
 # 23.47645
 rfixprec(n, H_counts, N, S, rho, rho2, J = 1)
 
-x_fixprec <- fixprecact(n, H_counts, N, S, rho, rho2, rho2, U = 1:4)
+x_fixprec <- fixprecact(n, H_counts, N, S, rho, rho2, U = 1:4)
 x_fixprec
 # 100.00000 100.00000 100.00000 100.00000  99.79400 110.23695  12.96905
 check_kkt(x_fixprec, H_counts, N, S, total, kappa, n, J = 1, tol_max = -9)
@@ -109,14 +109,14 @@ check_kkt(x_fixprec, H_counts, N, S, total, kappa, n, J = 1, tol_max = -9)
 
 all_subsets <- subsets_domains(H_counts)
 kkt <- sapply(all_subsets, function(i) {
-  x <- fixprecact(n, H_counts, N, S, rho, rho2, rho2, U = i)
+  x <- fixprecact(n, H_counts, N, S, rho, rho2, U = i)
   check_kkt(x, H_counts, N, S, total, kappa, n, J = 1, tol_max = -3)
 })
 kkt
-kkt[which.min(kkt)]
+kkt[which.min(kkt)] # 23.476
 x_ampl <- ampl_fixprec(n, H_counts, N, S, total, kappa, model = model, J = 1)
 x_ampl$n_dh
-x_ampl$Topt
+x_ampl$Topt # 23.47558
 
 ## Algorytm zaproponowany przez P. Profesora.
 
@@ -204,10 +204,10 @@ setNames(fixprecact(n, H_counts, N, S, rho, rho2, U = c(6, 2, 4, 1, 3)), H_names
 microbenchmark::microbenchmark(
   iter = rfixprec_iter(n, H_counts, N, S, rho, rho2),
   rec = rfixprec(n, H_counts, N, S, rho, rho2),
-  recmain = rfixprec_main(n, H_counts, N, S, total, kappa),
-  times = 100,
-  check = "identical",
-  unit = "us" # microseconds
+  # recmain = rfixprec_main(n, H_counts, N, S, total, kappa),
+  times = 1000,
+  check = "identical"
+  # unit = "us" # microseconds
 )
 
 # Przyklad (3d) ----
@@ -485,7 +485,7 @@ for (n in (sum(N) - 200):(sum(N) - 400)) {
       rec = rfixprec_main(n, H_counts, N, S, total, kappa),
       times = 5,
       check = "identical",
-      unit = "ms" # microseconds
+      unit = "ms" # milliseconds
     )
   )
 }
@@ -587,7 +587,7 @@ for (n in (sum(N) - 1):(sum(N) - 1000)) {
       ampl = round(ampl_fixprec(n, H_counts, N, S, total, kappa, model = model)$n_dh, 1),
       times = 1,
       check = "identical"
-      # unit = "ms" # microseconds
+      # unit = "ms" # milliseconds
     )
   )
 }
@@ -613,9 +613,9 @@ for (n in (sum(N) - 1):1) {
       ampl = round(ampl_fixprec(n, H_counts, N, S, total, kappa, model = model)$n_dh, 1),
       times = 1,
       check = "identical",
-      unit = "ms" # microseconds
+      unit = "ms" # milliseconds
     )
   )
 }
 
-# for n = 8, 9 181, ampl -> Restoration Phase Failed.
+# for n = 8, 10 181, ampl -> Restoration Phase Failed.

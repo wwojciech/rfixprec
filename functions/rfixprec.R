@@ -37,6 +37,10 @@
 #' x$lambda # 0.8476689
 #' x$s # 0.1094155 1.1006847
 fixprec <- function(n, H_counts, N, S, rho, rho2, details = FALSE) {
+  if (n <= 0 || n > sum(N)) {
+    stop("n must be such that n > 0 && n <= sum(N)")
+  }
+
   # H_counts as param instead of H_dind to avoid index misorder.
   H_dind <- H_cnt2dind(H_counts)
 
@@ -112,14 +116,10 @@ fixprec <- function(n, H_counts, N, S, rho, rho2, details = FALSE) {
 #' x1$s # 0.2747486 0.9581436
 #'
 fixprecact <- function(n, H_counts, N, S, rho, rho2, U = NULL, details = FALSE) {
-  NU <- N[U]
-  sumN_U <- sum(NU)
-  if (!(sumN_U < n || length(NU) == length(N))) {
-    stop("U must be such that sum(N[U]) < n or length(N[U]) == length(N)")
+  sumU_N <- sum(N[U])
+  if (!(sumU_N < n || (sumU_N == n && sum(N) == n))) {
+    stop("U must be such that sum(N[U]) < n || (sum(N[U]) == n && sum(N) == n)")
   }
-  # if (!(sumN_U < n || sumN_U == n && sum(N) == n)) {
-  #   stop("U must be such that sum(N[U]) < n or (sum(N[U]) = n && sum(N) == n)")
-  # }
 
   # reduce the model
   if (nonempty(U)) {
@@ -128,8 +128,8 @@ fixprecact <- function(n, H_counts, N, S, rho, rho2, U = NULL, details = FALSE) 
       return(N)
     }
     x <- N
-    n <- n - sumN_U
     N <- N[-U]
+    n <- n - sumU_N
     H_dind <- H_cnt2dind(H_counts)
     H_dind_Uc <- H_dind[-U]
     H_counts <- tabulate(H_dind_Uc, nbins = length(H_counts))
@@ -199,8 +199,12 @@ rfixprec <- function(n, H_counts, N, S, rho, rho2, U = NULL, J = NULL) {
   if (is.null(J)) {
     J <- seq_along(H_counts)
   }
+  sumU_N <- sum(N[U])
+  if (!(sumU_N < n || (sumU_N == n && sum(N) == n))) {
+    stop("U must be such that sum(N[U]) < n || (sum(N[U]) == n && sum(N) == n)")
+  }
   if (any(H_cnt2dind(H_counts)[U] %in% J)) {
-    stop("U must not have any strata from domain that is in J.")
+    stop("U must not have any strata from any domain that is in J.")
   }
 
   # strata global indices for domain J[1]

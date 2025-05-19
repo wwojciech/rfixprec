@@ -1,3 +1,37 @@
+# Przyklad (3 domeny) ----
+
+H_counts <- c(2, 2, 2)
+H_names <- rep(seq_along(H_counts), times = H_counts)
+N <- c(50, 50, 300, 300, 100, 200)
+S <- c(24, 16, 50, 650, 25, 56)
+names(N) <- H_names
+names(S) <- H_names
+total <- c(13, 6, 8)
+kappa <- c(0.5, 0.2, 0.3)
+rho <- total * sqrt(kappa)
+rho2 <- total^2 * kappa
+nmax(H_counts, N, S) - 1 # 612.4798
+sum(N) # 1000
+n <- 990
+
+# j = 2
+
+# r = 1
+rfixprec(1010, H_counts, N, S, rho, rho2, J = 1)
+#        1         1         2         2         3         3
+# 50.00000  50.00000  24.73183 321.51384 102.87488 460.87945
+
+# r = 2 = r^* - 1
+rfixprec(1010, H_counts, N, S, rho, rho2, J = 1, U = 4)
+#        1         1         2         2         3         3
+# 50.00000  50.00000 309.94604 300.00000  54.75437 245.29959
+
+# r = 3 = r^*
+rfixprec(1010, H_counts, N, S, rho, rho2, J = 1, U = c(4, 3))
+#        1         1         2         2         3         3
+# 50.00000  50.00000 300.00000 300.00000  56.56934 253.43066
+
+
 # Przyklad (2 domeny) ----
 
 H_counts <- c(2, 2)
@@ -90,11 +124,13 @@ check_obj_cnstr(x, H_counts, N, S, total, kappa, n)$Topt # 9.629295
 # cala domena 1 od razu wyrzucona
 
 # Tutaj tez ciekawostka: powiedzmy, ze J = {1}.
-# Zaczynam podejrzewac, ze w tym przypadku minimum nie istnieje, gdy n jest takie,
-# ze cala pierwsza domena jest przekroczona.
-# Troche analizy: |J| >= 1 => T >= 0 (zachodzi z powodu wiezow rownosciowych na T w domenach).
-# czyli jesli np |J| = 1 (nasz przypadek) to T >= 0.
-# ampl_fixprec(600, H_counts, N, S, total, kappa, model = model, J = 1)
+# Zaczynam podejrzewac, ze w tym przypadku minimum globalne (tzn przy obecnosci
+# wszystkich domen) T nie istnieje, gdy n jest takie, ze cala pierwsza domena
+# jest przekroczona.
+# Troche analizy: np. |J| = 1 i cala domena 1 zablokowana.
+# wtedy T >= 0 (zachodzi z powodu wiezow rownosciowych na T).
+# ampl_fixprec(1250, H_counts, N, S, total, kappa, model = model, J = 1)
+# "Restoration Phase Failed."
 
 H_counts <- c(2, 2)
 H_names <- rep(seq_along(H_counts), times = H_counts)
@@ -117,6 +153,8 @@ x <- setNames(fixprecact(n, H_counts, N, S, rho, rho2, U = 1), H_names)
 check_obj_cnstr(x, H_counts, N, S, total, kappa, n)$Topt # -11697.6
 (x <- setNames(fixprecact(n, H_counts, N, S, rho, rho2, U = 1:2), H_names))
 check_obj_cnstr(x, H_counts, N, S, total[-1], kappa[-1], n)$Topt # -15508765
+# to jest T min - ale bez domeny I, a globalne min T chyba nie istnieje, jesli
+# jestli obecne tylko wiezy: x_1h <= N_1h
 
 (x <- setNames(fixprecact(n, H_counts, N, S, rho, rho2, U = 1:2), H_names)) # cala domena 1 wyrzucona
 check_obj_cnstr(x[-(1:2)], H_counts[-1], N[-(1:2)], S[-(1:2)], total[-1], kappa[-1], n - sum(N[1:2]))
