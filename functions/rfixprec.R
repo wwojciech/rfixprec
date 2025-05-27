@@ -32,9 +32,11 @@
 #' sum(N) # 575
 #' n <- 528
 #'
-#' (x <- fixprec(n, H_counts, N, S, rho, details = TRUE))
+#' (x <- fixprec(n, H_counts, N, S, rho, rho2, details = TRUE))
 #' x$x # 162.47371 42.55264 142.98313 179.99052
 #' x$lambda # 0.8476689
+#' x$k # -1.10611
+#' x$v # -0.09891921 -0.99509547
 #' x$s # 0.1094155 1.1006847
 fixprec <- function(n, H_counts, N, S, rho, rho2, details = FALSE) {
   if (n <= 0 || n > sum(N)) {
@@ -44,7 +46,7 @@ fixprec <- function(n, H_counts, N, S, rho, rho2, details = FALSE) {
   # H_counts as param instead of H_dind to avoid index misorder.
   H_dind <- H_cnt2dind(H_counts)
 
-  # prepare D matrix
+  # D matrix
   a.vec <- tapply(N * S, H_dind, sum) / rho
   c.vec <- tapply(N * S^2, H_dind, sum) / rho2 # - b (b = 0 if M = N)
   D.matrix <- (a.vec %*% t(a.vec)) / n - diag(c.vec, nrow = length(c.vec))
@@ -52,21 +54,26 @@ fixprec <- function(n, H_counts, N, S, rho, rho2, details = FALSE) {
   # Eigen
   eigen_decomp <- eigen(D.matrix, symmetric = TRUE)
   lambda <- eigen_decomp$values[1] # largest eigenvalue (can be < 0)
-  v <- eigen_decomp$vectors[, 1] # eigenvector corresponding to lambda
+  v <- eigen_decomp$vectors[, 1] # (unit) eigenvector corresponding to lambda,
+  # can have all its elements negative - this is not a problem.
   if (diffsigns(v)) {
     stop("eigenvector containts entries of a different sign")
   }
 
   # allocation
-  s.vec <- n * v / sum(a.vec * v) # as.numeric(t(a.vec) %*% v)
-  A <- (N * S) / rep(rho, H_counts) # brackets due to finite-prec arithmetic!
-  x <- rep(s.vec, H_counts) * A
+  k <- n / sum(a.vec * v) # scalar - scaling factor
+  x <- k * rep(v / rho, H_counts) * N * S
+
+  # old code
+  # s.vec <- (n / sum(a.vec * v)) * v # as.numeric(t(a.vec) %*% v)
+  # A <- (N * S) / rep(rho, H_counts) # brackets due to finite-prec arithmetic!
+  # x <- rep(s.vec, H_counts) * A
 
   # prepare return object
   if (details) {
     list(
       D.matrix = D.matrix, eigen_decomp = eigen_decomp, lambda = lambda,
-      s = s.vec, x = x
+      k = k, v = v, s = k * v, x = x
     )
   } else {
     x
